@@ -31,12 +31,12 @@ Improvements to something that exists.
 
 ### Forecast
 
-- `[forecast]` Carry the uncertainty of `k` into the forecast range, so a weakly calibrated plan shows a wider band.
+- `[forecast]` Carry the uncertainty of `k` into the forecast range, so a weakly calibrated plan shows a wider band. Count distinct readings, not all of them: the endpoint repeats the same (%, cost) point while the PC idles, so about two thirds of the points are repeats and would overstate the evidence. The fit itself barely moves without them (`k` 2.2% higher on Pro, 0.2% on Max).
 - `[forecast]` Say which limit binds first (5-hour or weekly) and show a probability of hitting each, once the scheduled forecast exists.
 - `[forecast]` Show the current week's own ratio (`CurrentWeek.weekCalibration`) on the Fit card, which shows only the pooled one while the week's forecast, pacing and active time use the week's own.
 - `[forecast]` Check whether the usage endpoint's answer holds per-model weekly windows (`seven_day_opus`, `seven_day_sonnet`) that `src/collector/endpoint.ts:76` ignores: it reads only `seven_day` and its breakdown. A per-model limit would explain weeks of one plan disagreeing on the % per dollar. Max and Ultra also have a weekly Fable limit: Settings > Usage on a Max account shows it as a third bar, "Fable: Up to 50% of your weekly limit", with its own % used and the weekly reset time, so a cap inside the weekly limit, not an extra allowance. Its field in the answer is unknown.
-- `[forecast]` The projections leave out future claude.ai usage: `k` is fitted on Claude Code's share of the weekly % (`src/core/calibration.ts:54`), so the typical pace (`k × cost`) projects Claude Code alone until the own-pace blend takes over on day 3, and the active use left and the room per day count all the room as Claude Code's. Check `claudeCodeShare` in `snapshots.jsonl` first: near 100, nothing to do; often under 90, scale the typical rate by the week's share, or project claude.ai on its own.
 - `[forecast]` The 5-hour forecast (`src/core/forecast.ts:119`) blends nothing toward the window's own pace, and its samples are whole-window averages, idle tail included, applied to the hours left wherever the window stands. Backtest two variants on the 5-hour windows: the weekly blend toward the own pace, and samples taken from each past window's cost after the same elapsed time, over the hours left.
+- `[forecast]` The 5-hour forecast band is too narrow: its low and high are quartiles, so about half of the final values should land inside, and the backtest puts 34% inside over 58 windows (32% with more than half the window left, 36% with less). Widen it (the uncertainty of `k`, or wider quantiles) until "final in range" (`src/core/backtest.ts:190`) is near half.
 - `[forecast]` Active time per family (`activeByFamily`, `src/core/activeTime.ts:41`) gives each gap to the message that ends it, so subagent bursts (Explore on Haiku) take active time from the Opus main thread: the Opus-only pace reads high, the Haiku one low, and the model ratios inherit it. Measure the share of active time credited to subagent messages; if it is large, build the timeline from main-thread messages and give each subagent's cost to the main thread's family.
 
 ### Weeks
@@ -62,13 +62,12 @@ estimates of when the result becomes judgeable, not limits in the code.
 
 ### 4 weeks
 
-- Uncapped demand on real data: cut uncapped weeks at 90% after the fact and check how close the typical-pace estimate gets to their real final %. Needs at least 3 weeks that never reached the pressure point, so 4 weeks if one of them was capped.
-- `[forecast]` Backtest the week's own ratio (`weekCalibration`, `src/core/summary.ts:319`), used from the week's 3rd reading of 5% or more: a whole-percent reading at 5% is worth ±10%, and the endpoint takes 3 readings within half an hour. Compare it with the pooled ratio and with a blend that leans on the own ratio as the week's cost grows.
-- `[forecast]` The fits (`fitRatio`, `src/core/calibration.ts:84`) take every reading as a point: the endpoint reads every 15 minutes, idle nights included while the server runs, so a week weighs by how long the PC was on, identical (%, cost) points repeat, and the RMSE runs over cumulative, correlated points. Compare the fit and the backtest with distinct readings only, or one point per window.
-- `[forecast]` Check the forecast band with the backtest: low and high are quartiles, so about half of the final values should land inside ("final in range", `src/core/backtest.ts:190`); far from half, the band is too narrow or too wide.
+- `[forecast]` Backtest the week's own ratio (`weekCalibration`, `src/core/summary.ts:330`), used from the week's 3rd reading of 5% or more: a whole-percent reading at 5% is worth ±10%, and the endpoint takes 3 readings within half an hour. Compare it with the pooled ratio and with a blend that leans on the own ratio as the week's cost grows. Score each ratio on the next readings (the cost over the next hours × the ratio, against the real rise of the %), not on the final %: capped weeks end at 100% whatever the ratio, but their readings before the cap still count. The backtest has one method, so this needs a variant. The 4 Pro weeks are enough for Pro (their own ratios were 0.36, 0.41, 0.45 and 0.50 % per $, rising every week); Max needs about 3 weeks of its own.
 
 ### 6 weeks
 
+- Uncapped demand on real data: check how close the typical-pace estimate (`src/core/planFit.ts`) gets to what a capped week really needed. Pro weeks almost always reach the pressure point, so the answer key is Max weeks: cut each one where Pro's limit would have stopped it (90% of Pro, about 18% of Max), fill the rest with the estimate, and compare with the real % a day before the reset, leaving out the end-of-week push to 100% (see the pace model under "12 weeks"). Needs about 3 completed Max weeks.
+- `[forecast]` Check the weekly forecast band as the 5-hour one was checked, once about 3 weeks end below the limit: the 3 weeks scored so far all ended at the cap, which a forecast capped at 100% matches trivially. Score against the % a day before the reset, not the final: the end-of-week push to 100% is a choice made after reading the forecast, not something it predicts.
 - Forecast stage 3 (expected active hours from a weekday × hour profile) is paused: the backtest cannot tell whether it beats the flat pace on so little history. The profile needs 3 weeks to exist (`docs/plans/forecast-accuracy.md`) and the backtest needs about 3 more weeks to score it against the flat pace. Plan: `docs/plans/forecast-accuracy.md`.
 - Weekday-aware daily usage (weekends differ) for the forecast. Covered by stage 3 of `docs/plans/forecast-accuracy.md`.
 - `[forensics]` Calibration cross-check from observed limit hits: the median cost of limit-hit windows is a capacity estimate, floored by the highest cost of a window that did not hit the limit; compare with the demand estimates of limit-hit weeks. Server overloads are stored (`events.jsonl`) but not shown anywhere.
@@ -78,13 +77,14 @@ estimates of when the result becomes judgeable, not limits in the code.
 
 ### 12 weeks
 
-- A model of how pace slows as a week nears its limit, to replace the fixed 90% pressure point. Needs many weeks to tell slowing down from a quiet week.
+- A model of how pace responds to the room left, to replace the fixed 90% pressure point. The user steers pace toward an even share of the room all week, by feel rather than by calculation: a heavy day is followed by slower days (and rest), a light one by faster days. Near the reset, room left is pushed to 100% on purpose (more projects in parallel, higher effort), mostly in the last day. So the pull runs both ways and all week, not only as a slow-down near the limit. Needs many weeks to tell this steering from a quiet week.
 - `[forecast]` A per-family weekly calibration (% per dollar by model family) instead of assuming limits scale with API price, once enough weeks with different mixes exist to tell model mix from a change in the limits. Two weeks of one plan measured 0.028 and 0.099 % per $; the current week's own fit covers it meanwhile. Both figures price Sonnet 5.5 cache reads at twice the list price: re-measure them before reading the gap as the model mix.
 - `[forecast]` Pace by effort level and fast mode (`UsageRecord.effort`, `speed`), once the per-model pace shows how much the model alone explains.
 
 ### Needs a second plan
 
 - Convert between plans with the measured multipliers (Plans tab, "How far to trust the conversions") when both plans have enough weeks, instead of the advertised ones; the same for the fit borrowed right after a plan change (`borrowedFit`, `src/core/summary.ts`).
+- Plan fit (`src/core/planFit.ts`) assumes a week's demand does not depend on the plan, but the user paces to the room the plan gives (see the pace model under "12 weeks"), so the demand estimated from capped Pro weeks likely understates what Max weeks use. Compare the two once about 3 Max weeks exist, using Max weeks' usage before the end-of-week push. Weeks pushed to 100% would otherwise read as needing all of the plan.
 
 ### No week count (waits for an event)
 
