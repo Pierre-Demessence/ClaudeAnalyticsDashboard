@@ -1,7 +1,8 @@
 import type { Plan, PlanPeriod, Snapshot } from './types.ts';
 
-import { WEEK_MS } from './calibration.ts';
+import { FIVE_HOURS_MS, WEEK_MS } from './calibration.ts';
 import { convertWeekly, planAt, planChanges, WEEKLY_MULTIPLIERS } from './plans.ts';
+import { RESET_TOLERANCE_MS } from './weekWindows.ts';
 
 /** A reading this many points under the previous one of its window marks a restart. */
 export const RESTART_DROP = 2;
@@ -26,6 +27,37 @@ export interface PartPercent {
 }
 
 /**
+ * When the usage of a window restarted, from its readings (oldest first): a reading
+ * `RESTART_DROP` points or more under the previous one marks a restart, at the latest
+ * plan change between the two, else at the later reading; an upgrade before the first
+ * reading cannot show as a drop, and restarts the usage too.
+ */
+function restartTimes(
+  readings: readonly Snapshot[],
+  percentOf: (snapshot: Snapshot) => number,
+  windowFrom: number,
+  reset: number,
+  changes: ReturnType<typeof planChanges>,
+): Set<number> {
+  const restarts = new Set<number>();
+  for (let i = 1; i < readings.length; i++) {
+    const [before, after] = [readings[i - 1]!, readings[i]!];
+    if (percentOf(after) > percentOf(before) - RESTART_DROP)
+      continue;
+    const [from, to] = [Date.parse(before.ts), Date.parse(after.ts)];
+    // A plan change between the two readings explains the drop; else the later reading does.
+    const change = changes.findLast(c => c.at > from && c.at <= to);
+    restarts.add(change?.at ?? to);
+  }
+  const firstReading = Date.parse(readings[0]!.ts);
+  for (const change of changes) {
+    if (WEEKLY_MULTIPLIERS[change.to] > WEEKLY_MULTIPLIERS[change.from] && change.at > windowFrom && change.at < reset && firstReading >= change.at)
+      restarts.add(change.at);
+  }
+  return restarts;
+}
+
+/**
  * Each weekly window with readings, by reset time (ms), split where its usage
  * restarted; parts oldest first. Anthropic restarts the weekly % before the reset
  * time on an upgrade (100% to 0% with the same reset time) and on a free reset.
@@ -45,22 +77,7 @@ export function windowParts(snapshots: readonly Snapshot[], planHistory: readonl
   const result = new Map<number, WindowPart[]>();
   for (const [reset, readings] of byReset) {
     const windowFrom = reset - WEEK_MS;
-    const restarts = new Set<number>();
-    for (let i = 1; i < readings.length; i++) {
-      const [before, after] = [readings[i - 1]!, readings[i]!];
-      if (after.weekly > before.weekly - RESTART_DROP)
-        continue;
-      const [from, to] = [Date.parse(before.ts), Date.parse(after.ts)];
-      // A plan change between the two readings explains the drop; else the later reading does.
-      const change = changes.findLast(c => c.at > from && c.at <= to);
-      restarts.add(change?.at ?? to);
-    }
-    // An upgrade before the first reading cannot show as a drop, and restarts the usage.
-    const firstReading = Date.parse(readings[0]!.ts);
-    for (const change of changes) {
-      if (WEEKLY_MULTIPLIERS[change.to] > WEEKLY_MULTIPLIERS[change.from] && change.at > windowFrom && change.at < reset && firstReading >= change.at)
-        restarts.add(change.at);
-    }
+    const restarts = restartTimes(readings, snapshot => snapshot.weekly, windowFrom, reset, changes);
 
     const starts = [windowFrom, ...[...restarts].sort((a, b) => a - b)];
     // A reading goes to the last part starting at or before it (the first part when none does).
@@ -75,6 +92,22 @@ export function windowParts(snapshots: readonly Snapshot[], planHistory: readonl
     }));
   }
   return result;
+}
+
+/**
+ * Where the usage of the 5-hour window ending at `resetsAt` (ms) restarted last, from
+ * the readings of that window, or undefined when it did not. The Pro to Max upgrade
+ * moved the 5-hour reset, so the new window started 7 minutes before it (an upgrade before
+ * the first reading); a drop under the same reset time (perhaps a free reset) is a restart too.
+ */
+export function fiveHourRestartAt(snapshots: readonly Snapshot[], planHistory: readonly PlanPeriod[], resetsAt: number): number | undefined {
+  const readings = snapshots
+    .filter(s => s.fiveHour !== undefined && s.fiveHourResetsAt !== undefined && Math.abs(Date.parse(s.fiveHourResetsAt) - resetsAt) <= RESET_TOLERANCE_MS)
+    .sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts));
+  if (readings.length === 0)
+    return undefined;
+  const restarts = restartTimes(readings, snapshot => snapshot.fiveHour!, resetsAt - FIVE_HOURS_MS, resetsAt, planChanges(planHistory));
+  return restarts.size > 0 ? Math.max(...restarts) : undefined;
 }
 
 /** Where a reading's cost counts from: the start of its part (its window's start when the window has no parts). */

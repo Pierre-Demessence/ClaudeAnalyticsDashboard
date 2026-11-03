@@ -399,6 +399,18 @@ describe('buildSummary', () => {
       expect(summary.fiveHourSession?.forecast?.median).toBeCloseTo(30 + 24);
     });
 
+    it('counts the own pace from a restart inside the window', () => {
+      const upgrade: PlanPeriod[] = [{ from: '2026-01-01T00:00:00.000Z', plan: 'pro', source: 'manual' }, { from: '2026-10-20T11:00:00.000Z', plan: 'max5', source: 'manual' }];
+      // The 5-hour % read 40 at 10:30, then 0 at 11:30 after the upgrade at 11:00, and 10 at 11:50, with the same reset time.
+      const restarted = [['10:30', 40], ['11:30', 0], ['11:50', 10]].map(([time, fiveHour]) =>
+        snap(at(time as string), 30, RESET, { fiveHour: fiveHour as number, fiveHourResetsAt }));
+      const summary = buildSummary({ endpointEnabled: true, now: NOW, planHistory: upgrade, records: [...records, ...afternoons, ...today], snapshots: restarted, timeZone: 'UTC' });
+      // Without a calibration the forecast is the trend: 10 points in the 50 minutes since the upgrade, over the 3h10 left.
+      // Counted from the window start it would be 10 points in 1h50, ending near 27.
+      expect(summary.fiveHourSession?.forecast).toMatchObject({ method: 'trend' });
+      expect(summary.fiveHourSession?.forecast?.median).toBeCloseTo(10 + 10 / (50 / 60) * (190 / 60));
+    });
+
     it('takes the sessions under the current plan, once there are 3', () => {
       // The last 4 days' sessions also spend $60 late in the window.
       const heavy = [1, 2, 3, 4].flatMap(d => [1, 2, 3].map(m => rec(NOW - d * DAY_MS + 3 * HOUR_MS + m * 10 * 60_000)));

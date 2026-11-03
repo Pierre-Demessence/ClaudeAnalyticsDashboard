@@ -112,7 +112,11 @@ finished session of the last 4 weeks spent from the same elapsed time to its end
 sessions since it once there are 3, as for the weekly pace (a smaller plan's limit
 cut its sessions short). The band's centre leans toward the session's own pace (used %
 over the time elapsed) by the share of the window elapsed (`ownPaceAfterMs` of 5 hours),
-keeping the tails' spread around it. Every reading gets the usage since it added back,
+keeping the tails' spread around it. The own pace counts from the window's last restart
+(`fiveHourRestartAt`, with `windowParts`' rules): the Pro to Max upgrade moved the 5-hour
+reset, and the new window started 7 minutes before the upgrade. The 5-hour window is not
+split into parts, and its calibration still counts from the window start: the restart
+moves both by minutes, a time when the old plan's limit was blocking all usage. Every reading gets the usage since it added back,
 not only stale ones: 15 minutes is 5% of a 5-hour window.
 
 Rejected: the quartiles of whole-session $/hour (idle time included) × the hours

@@ -15,6 +15,7 @@ Noteworthy changes for users. The format follows
   about half the tested windows, as a range from the likely low to the likely high
   should (34% before). "Likely to hit the limit" warns for 11 of the 14 tested
   windows that hit it, with 2 false alarms.
+  After an upgrade, the session's own pace counts from the upgrade.
 
 ## [0.4.0]
 

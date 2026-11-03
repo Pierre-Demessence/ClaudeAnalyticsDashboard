@@ -34,7 +34,7 @@ import { weekPacing } from './pacing.ts';
 import { buildPlanFitInput } from './planFit.ts';
 import { convertPercent, planAt, planChanges, planFromSubscription } from './plans.ts';
 import { priceFor } from './pricing.ts';
-import { endedPartPercent, partStartOf, windowParts } from './restarts.ts';
+import { endedPartPercent, fiveHourRestartAt, partStartOf, windowParts } from './restarts.ts';
 import { buildSessions, DEFAULT_LIMIT_THRESHOLD, finishedSessions, fiveHourWindows, sessionTailCosts } from './sessions.ts';
 import { typicalWeek, weeklyShares } from './share.ts';
 import { subscriptionStartOf, valueForMoney } from './valueForMoney.ts';
@@ -314,6 +314,8 @@ export function prepareSummary(input: SummaryInput): PreparedSummary {
           ownPaceAfterMs: FIVE_HOUR_OWN_PACE_AFTER_MS,
           resetsAt,
           sampleMs: HOUR_MS,
+          // A restart inside the window (an upgrade, a free reset) empties the %: the own pace counts from it.
+          startsAt: fiveHourRestartAt(snapshots, planHistory, resetsAt),
           tailCosts: sessionTailCosts(paceSessions, elapsed, costBetween),
           used: fiveHourSession.estimatedNow ?? fiveHour,
           windowMs: FIVE_HOURS_MS,

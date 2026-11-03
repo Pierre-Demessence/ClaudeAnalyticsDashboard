@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { PlanPeriod, Snapshot } from './types.ts';
 
-import { endedPartPercent, partStartOf, windowParts } from './restarts.ts';
+import { endedPartPercent, fiveHourRestartAt, partStartOf, windowParts } from './restarts.ts';
 
 const RESET = '2026-10-28T20:00:00.000Z';
 const RESET_MS = Date.parse(RESET);
@@ -83,6 +83,39 @@ describe('windowParts', () => {
     const other = '2026-10-21T20:00:00.000Z';
     const parts = windowParts([snap('2026-10-20T10:00:00Z', 80, other), snap('2026-10-23T10:00:00Z', 5)], [pro]);
     expect([...parts.keys()].sort()).toEqual([Date.parse(other), RESET_MS].sort());
+  });
+});
+
+describe('fiveHourRestartAt', () => {
+  const FIVE_HOUR_RESET = '2026-10-26T20:00:00.000Z';
+  const fiveHour = (ts: string, percent: number, resetsAt = FIVE_HOUR_RESET): Snapshot => ({ ...snap(ts, 10), fiveHour: percent, fiveHourResetsAt: resetsAt });
+  const resetMs = Date.parse(FIVE_HOUR_RESET);
+  const history = [pro, max5From('2026-10-26T16:27:00Z')];
+
+  it('is the plan change between two readings that drop the 5-hour % with the same reset time', () => {
+    const readings = [fiveHour('2026-10-26T16:16:00Z', 100), fiveHour('2026-10-26T16:28:00Z', 0)];
+    expect(fiveHourRestartAt(readings, history, resetMs)).toBe(Date.parse('2026-10-26T16:27:00Z'));
+  });
+
+  it('is the later reading of a drop without a plan change, and the last of several restarts', () => {
+    const readings = [fiveHour('2026-10-26T16:00:00Z', 60), fiveHour('2026-10-26T16:10:00Z', 5), fiveHour('2026-10-26T16:30:00Z', 40), fiveHour('2026-10-26T16:40:00Z', 3)];
+    expect(fiveHourRestartAt(readings, [pro], resetMs)).toBe(Date.parse('2026-10-26T16:40:00Z'));
+  });
+
+  it('is the upgrade that came before the first reading of the window', () => {
+    expect(fiveHourRestartAt([fiveHour('2026-10-26T17:00:00Z', 3)], history, resetMs)).toBe(Date.parse('2026-10-26T16:27:00Z'));
+  });
+
+  it('is undefined for a window that kept counting, one without readings, or readings of another window', () => {
+    expect(fiveHourRestartAt([fiveHour('2026-10-26T16:00:00Z', 10), fiveHour('2026-10-26T17:00:00Z', 30)], history, resetMs)).toBeUndefined();
+    expect(fiveHourRestartAt([], history, resetMs)).toBeUndefined();
+    const other = [fiveHour('2026-10-26T10:00:00Z', 80, '2026-10-26T14:00:00.000Z'), fiveHour('2026-10-26T11:00:00Z', 5, '2026-10-26T14:00:00.000Z')];
+    expect(fiveHourRestartAt(other, [pro], resetMs)).toBeUndefined();
+  });
+
+  it('does not take a downgrade for a restart', () => {
+    const down: PlanPeriod[] = [{ ...pro, plan: 'max5' }, { from: '2026-10-26T16:27:00Z', plan: 'pro', source: 'manual' }];
+    expect(fiveHourRestartAt([fiveHour('2026-10-26T17:00:00Z', 3)], down, resetMs)).toBeUndefined();
   });
 });
 
