@@ -14,4 +14,3 @@ Not schedulable until the history exists; see "Waiting for data" in the backlog.
 
 - **Forecast accuracy, stage 3** (`docs/plans/forecast-accuracy.md`): resumes when
   several completed weeks exist.
-- **Plans and what-if depth**: resumes when the Plans tab appears (3 weeks).
