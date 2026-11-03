@@ -76,6 +76,45 @@ describe('forecastWindow', () => {
     expect(forecast.capAt).toBeCloseTo(start + HOUR_MS + 70 / 30 * HOUR_MS);
   });
 
+  describe('projecting from the tails of past windows', () => {
+    const fiveHour = { resetsAt, sampleMs: HOUR_MS, windowMs: 5 * HOUR_MS };
+    const asOf = resetsAt - 2 * HOUR_MS;
+
+    it('adds the calibrated quartiles of what past windows spent over the time left', () => {
+      const forecast = forecastWindow({ ...fiveHour, asOf, k: 2, tailCosts: [0, 5, 10, 15, 20], used: 30 })!;
+      // Quartiles $5, $10, $15 × 2 %/$ = 10, 20, 30 points on top of 30 %.
+      expect(forecast).toEqual({ high: 60, low: 40, median: 50, method: 'calibrated' });
+    });
+
+    it('does not scale the tails by the hours left: they already are the cost over them', () => {
+      const early = forecastWindow({ ...fiveHour, asOf: resetsAt - 4 * HOUR_MS, k: 1, tailCosts: [8], used: 0 })!;
+      const late = forecastWindow({ ...fiveHour, asOf: resetsAt - HOUR_MS, k: 1, tailCosts: [8], used: 0 })!;
+      expect(early.median).toBe(8);
+      expect(late.median).toBe(8);
+    });
+
+    it('times the cap with the median tail spread evenly over the time left', () => {
+      const forecast = forecastWindow({ ...fiveHour, asOf, k: 2, tailCosts: [30], used: 60 })!;
+      // 60 points over 2 hours: 30 per hour, 100 % after 40/30 h.
+      expect(forecast.median).toBe(120);
+      expect(forecast.capAt).toBeCloseTo(asOf + 40 / 30 * HOUR_MS);
+    });
+
+    it('projects nothing beyond what is used at the reset', () => {
+      expect(forecastWindow({ ...fiveHour, asOf: resetsAt, k: 2, tailCosts: [5], used: 40 })).toEqual({ high: 40, low: 40, median: 40, method: 'calibrated' });
+    });
+
+    it('reports a cap already reached', () => {
+      expect(forecastWindow({ ...fiveHour, asOf, k: 2, tailCosts: [5], used: 100 })!.capAt).toBe(asOf);
+    });
+
+    it('needs a calibration and at least one tail, else falls back to the window own trend', () => {
+      const start = resetsAt - 5 * HOUR_MS;
+      expect(forecastWindow({ ...fiveHour, asOf: start + HOUR_MS, tailCosts: [5], used: 30 })!.method).toBe('trend');
+      expect(forecastWindow({ ...fiveHour, asOf: start + HOUR_MS, k: 2, tailCosts: [], used: 30 })!.method).toBe('trend');
+    });
+  });
+
   describe('resampling the sum of the periods left', () => {
     // A day of $100 among idle days: the median day is $0, the mean $20.
     const skewed = { ...week, asOf: resetsAt - 7 * DAY_MS, k: 1, paceSamples: [0, 0, 0, 0, 100], used: 0 };

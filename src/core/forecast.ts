@@ -8,7 +8,7 @@ export interface WindowForecast {
   low: number;
   median: number;
   /**
-   * `calibrated`: typical cost pace × ratio; `trend`: this window's own pace;
+   * `calibrated`: typical cost pace (or past windows' tail costs) × ratio; `trend`: this window's own pace;
    * `typical`: the final % of past windows, before the trend is usable.
    */
   method: 'calibrated' | 'trend' | 'typical';
@@ -25,8 +25,8 @@ export interface ForecastInput {
    * The band keeps the spread of the typical pace around the blend. With `resampleSum` only.
    */
   ownPaceAfterMs?: number;
-  /** Recent costs per `sampleMs`, idle periods included: the spread of the typical pace. */
-  paceSamples: readonly number[];
+  /** Recent costs per `sampleMs`, idle periods included: the spread of the typical pace. Absent with `tailCosts`. */
+  paceSamples?: readonly number[];
   /**
    * Each sample is one independent period, so the cost over the periods left is
    * resampled as a sum of samples, not one sample times their count. Calibrated only.
@@ -40,6 +40,12 @@ export interface ForecastInput {
    * count from it, and the typical % is scaled to the share of the window left after it.
    */
   startsAt?: number;
+  /**
+   * What past windows spent from the same elapsed time as this one to their end: the band
+   * is `used` plus `k` times their quartiles, so the hours left are already in them.
+   * Needs `k`; replaces the pace samples.
+   */
+  tailCosts?: readonly number[];
   /** Final % of past windows (25th, 50th, 75th percentile), for the `typical` method. */
   typical?: { high: number; low: number; median: number };
   /** Used % at `asOf`. */
@@ -101,13 +107,20 @@ function typicalForecast(typical: NonNullable<ForecastInput['typical']>, used: n
 }
 
 /** Projects a limit window (weekly or 5-hour) to its reset. */
-export function forecastWindow({ asOf, k, ownPaceAfterMs, paceSamples, resampleSum, resetsAt, sampleMs, startsAt: restartedAt, typical, used, windowMs }: ForecastInput): WindowForecast | undefined {
+export function forecastWindow({ asOf, k, ownPaceAfterMs, paceSamples = [], resampleSum, resetsAt, sampleMs, startsAt: restartedAt, tailCosts = [], typical, used, windowMs }: ForecastInput): WindowForecast | undefined {
   const startsAt = restartedAt ?? resetsAt - windowMs;
   const periodsLeft = Math.max(0, (resetsAt - asOf) / sampleMs);
   let method: WindowForecast['method'];
   let rates: [number, number, number];
 
-  if (k !== undefined && paceSamples.length > 0 && resampleSum) {
+  if (k !== undefined && tailCosts.length > 0) {
+    method = 'calibrated';
+    // As rates per period, so the cap time below stays shared: the tail is spread evenly over the time left.
+    rates = periodsLeft > 0
+      ? [0.25, 0.5, 0.75].map(q => quantile(tailCosts, q)! * k / periodsLeft) as [number, number, number]
+      : [0, 0, 0];
+  }
+  else if (k !== undefined && paceSamples.length > 0 && resampleSum) {
     method = 'calibrated';
     // As rates per period, so the projection and the cap time below stay shared; no periods left projects nothing.
     rates = periodsLeft > 0

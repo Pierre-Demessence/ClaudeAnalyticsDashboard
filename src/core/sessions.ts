@@ -3,7 +3,7 @@ import type { ApiEvent, PlanPeriod, Snapshot, UsageRecord } from './types.ts';
 
 import { dayKey, startOfDay } from './aggregate.ts';
 import { sessionProjects } from './breakdown.ts';
-import { DAY_MS, FIVE_HOURS_MS, HOUR_MS } from './calibration.ts';
+import { DAY_MS, FIVE_HOURS_MS } from './calibration.ts';
 import { convertPercent, planAt } from './plans.ts';
 import { messageCost, sonnetSaving } from './pricing.ts';
 import { median } from './stats.ts';
@@ -208,14 +208,19 @@ export function fiveHourWindows({ hits = [], k, limitThreshold, now, planHistory
 }
 
 /**
- * Average $/hour of each finished window that started at or after `from`, idle
- * time included (like the zero days of the daily series). Windows without
- * Claude Code messages are claude.ai use that transcripts cannot price.
+ * The finished windows that started at or after `from`, the sessions the forecast learns
+ * from. Windows without Claude Code messages are claude.ai use that transcripts cannot price.
  */
-export function sessionPaces(windows: readonly FiveHourWindow[], from: number): number[] {
-  return windows
-    .filter(w => !w.inProgress && w.messages > 0 && Date.parse(w.start) >= from)
-    .map(w => w.cost / (FIVE_HOURS_MS / HOUR_MS));
+export function finishedSessions(windows: readonly FiveHourWindow[], from: number): FiveHourWindow[] {
+  return windows.filter(w => !w.inProgress && w.messages > 0 && Date.parse(w.start) >= from);
+}
+
+/**
+ * What each session spent from `elapsedMs` after its start to its end: the cost a window
+ * at that point of its run can still expect. A session cut short before that point spent nothing.
+ */
+export function sessionTailCosts(sessions: readonly FiveHourWindow[], elapsedMs: number, costBetween: (from: number, to: number) => number): number[] {
+  return sessions.map(w => costBetween(Date.parse(w.start) + elapsedMs, Date.parse(w.end)));
 }
 
 /** The 5-hour windows of a range, or of the last 7 local days. */

@@ -100,19 +100,35 @@ only new bytes are read. A last line without a newline that is not valid JSON
 is still being written and is left for the next run. A file that shrank or
 changed without growing is read again from the start.
 
-## 5-hour forecast: its own calibration and session pace
+## 5-hour forecast: its own calibration and the tails of past sessions
 
-The 5-hour window is forecast with the weekly method (`forecastWindow`), with
+The 5-hour window is forecast with the weekly method's shell (`forecastWindow`), with
 two inputs of its own. Its % per $ is fitted separately on the 5-hour readings,
 since the ratio between the 5-hour and weekly limits is not published; the
 endpoint gives no Claude Code share for that window, so claude.ai usage counts
-in the fit. Its pace is the average $/hour of each 5-hour session in the last
-4 weeks, idle time included, rebuilt from message times; after a plan change, of the
+in the fit. Its band is the % used plus the calibrated quartiles of what each
+finished session of the last 4 weeks spent from the same elapsed time to its end
+(`sessionTailCosts`; sessions are rebuilt from message times); after a plan change, the
 sessions since it once there are 3, as for the weekly pace (a smaller plan's limit
-cut its sessions short). Daily cost / 24 was
-rejected: a session only exists while working, so it would understate the
-pace. Every reading gets the usage since it added back, not only stale ones:
-15 minutes is 5% of a 5-hour window.
+cut its sessions short). Every reading gets the usage since it added back, not only
+stale ones: 15 minutes is 5% of a 5-hour window.
+
+Rejected: the quartiles of whole-session $/hour (idle time included) × the hours
+left. A session's average mixes its busy start with its idle tail and ignores how far
+the window has run, so the band was too narrow and off-centre: 34% of 58 windows ended inside it (half expected), median
+error 12.6 points. The tails from the same elapsed time reach 62% (early in the
+window 44%, late 76%) and 8.5 points. Also rejected: carrying the uncertainty of `k`
+into the band, which moved the coverage only from 34% to 38%; resampling sums of
+hours as the weekly forecast does with days, since the hours of a session are not
+independent; and daily cost / 24, which would understate the pace of a session that
+only exists while working. The tails' median is below their mean (many idle
+tails), so the median projection reaches 100% less often: of 14 windows that hit the
+limit, "Likely to hit" announces 6 against 11, with no false alarm against 2 (backtest,
+58 windows). The "Tight" verdict (median from 85%) makes up for it: the two together
+flag 11 of 14 with 2 false alarms, the old scores. Centring the band on the mean tail
+instead was rejected: it flags 9 of 14 and the median error returns to 12.7 points.
+Calling a hit from a point of the band between the median and the high end recovers the
+recall only with a number tuned on 14 hit windows.
 
 ## Active use left: pace per active hour, pauses over 15 minutes excluded
 
@@ -206,8 +222,8 @@ days left, which is biased low for skewed usage with idle days (the median of a
 sum of days is near the days × the mean, not the median day); and a weekly
 calibration per model family, since the evidence is two weeks confounded with
 time and the 5-hour readings do not confirm it (backlog). The 5-hour forecast
-keeps the quantile of session paces × hours left: its samples are averages over
-whole sessions, not independent hours.
+takes the tails of past sessions instead (its own entry): a session's hours are not
+independent draws.
 
 The past days are only a prior for the week's pace: they are slow to follow an idle
 week or a sudden heavy one. So the centre of the projection blends linearly toward

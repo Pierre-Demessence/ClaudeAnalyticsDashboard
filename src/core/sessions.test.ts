@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest';
 import type { SessionsInput } from './sessions.ts';
 import type { ApiEvent, PlanPeriod, Snapshot, UsageRecord } from './types.ts';
 
-import { buildSessions, fiveHourWindows, sessionPaces } from './sessions.ts';
+import { createCostIndex } from './aggregate.ts';
+import { buildSessions, finishedSessions, fiveHourWindows, sessionTailCosts } from './sessions.ts';
 
 /** $20 of Opus 5.5 output by default. */
 function rec(ts: string, extra: Partial<UsageRecord> = {}): UsageRecord {
@@ -224,7 +225,7 @@ describe('range and details', () => {
   });
 });
 
-describe('sessionPaces', () => {
+describe('finishedSessions', () => {
   const input = { limitThreshold: 95, now: Date.parse('2026-10-03T12:00:00Z') };
 
   it('cuts sessions where the readings put the windows, not where messages suggest', () => {
@@ -232,16 +233,48 @@ describe('sessionPaces', () => {
     const records = [rec('2026-10-02T11:00:00Z'), rec('2026-10-02T13:00:00Z')];
     const snapshots = [snap('2026-10-02T14:00:00Z', '2026-10-02T17:00:00.000Z', 20)];
     const windows = fiveHourWindows({ ...input, records, snapshots });
-    // $20 over 5 hours each; guessing from messages alone would give one $40 session.
-    expect(sessionPaces(windows, 0)).toEqual([4, 4]);
+    // $20 each; guessing from messages alone would give one $40 session.
+    expect(finishedSessions(windows, 0).map(w => w.cost)).toEqual([20, 20]);
   });
 
   it('leaves out windows in progress, without messages, or before `from`', () => {
     const records = [rec('2026-10-01T08:00:00Z'), rec('2026-10-03T10:00:00Z')];
     const snapshots = [snap('2026-10-02T12:00:00Z', '2026-10-02T15:00:00.000Z', 5)];
     const windows = fiveHourWindows({ ...input, records, snapshots });
-    expect(sessionPaces(windows, Date.parse('2026-10-02T00:00:00Z'))).toEqual([]);
-    expect(sessionPaces(windows, 0)).toEqual([4]);
+    expect(finishedSessions(windows, Date.parse('2026-10-02T00:00:00Z'))).toEqual([]);
+    expect(finishedSessions(windows, 0).map(w => w.cost)).toEqual([20]);
+  });
+});
+
+describe('sessionTailCosts', () => {
+  const input = { limitThreshold: 95, now: Date.parse('2026-10-03T12:00:00Z') };
+  const hours = (n: number) => n * 3_600_000;
+
+  it('is what each session spent from the same elapsed time to its end', () => {
+    // Window 12:00–17:00 on 2 Oct: $20 at 13:00, $20 at 16:00. After 2 hours (from 14:00) only the 16:00 message is left.
+    const records = [rec('2026-10-02T13:00:00Z'), rec('2026-10-02T16:00:00Z')];
+    const snapshots = [snap('2026-10-02T14:00:00Z', '2026-10-02T17:00:00.000Z', 20)];
+    const windows = finishedSessions(fiveHourWindows({ ...input, records, snapshots }), 0);
+    expect(sessionTailCosts(windows, hours(2), createCostIndex(records))).toEqual([20]);
+    expect(sessionTailCosts(windows, hours(0), createCostIndex(records))).toEqual([40]);
+    expect(sessionTailCosts(windows, hours(4.5), createCostIndex(records))).toEqual([0]);
+  });
+
+  it('counts nothing from a session cut short before that elapsed time', () => {
+    // An upgrade moved the reset: the first window ends at 14:00 instead of 17:00.
+    const records = [rec('2026-10-02T13:00:00Z'), rec('2026-10-02T18:00:00Z')];
+    const snapshots = [
+      snap('2026-10-02T12:30:00Z', '2026-10-02T17:00:00.000Z', 20),
+      snap('2026-10-02T14:30:00Z', '2026-10-02T19:00:00.000Z', 20),
+    ];
+    const windows = finishedSessions(fiveHourWindows({ ...input, records, snapshots }), 0);
+    // Newest first: from 3 hours in, the second window still spends $20 at 18:00, the first ended at 14:00.
+    expect(windows.map(w => w.end)).toEqual(['2026-10-02T19:00:00.000Z', '2026-10-02T14:00:00.000Z']);
+    expect(sessionTailCosts(windows, hours(3), createCostIndex(records))).toEqual([20, 0]);
+  });
+
+  it('is empty without sessions', () => {
+    expect(sessionTailCosts([], hours(1), () => 1)).toEqual([]);
   });
 });
 

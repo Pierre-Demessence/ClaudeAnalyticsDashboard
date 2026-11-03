@@ -109,7 +109,7 @@ export function Meter({ estimated, forecast, measure: fixed, used }: MeterProps)
               <span
                 className="meter-range-label"
                 style={{ left: layout.range.labelLeft }}
-                {...tip('Likely range: projection with a quieter (25th percentile) and a busier (75th percentile) pace than usual.')}
+                {...tip('Likely range: the projection if the rest of the window is quieter (25th percentile) or busier (75th percentile) than usual.')}
               >
                 {layout.range.label}
               </span>

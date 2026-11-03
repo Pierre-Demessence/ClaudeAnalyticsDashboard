@@ -375,7 +375,7 @@ describe('buildSummary', () => {
     expect(busy.activeLeftMs!).toBeLessThan(quiet.activeLeftMs!);
   });
 
-  it('forecasts the 5-hour window from the calibrated session pace', () => {
+  describe('5-hour forecast from the tails of past sessions', () => {
     const at = (time: string) => Date.parse(`2026-10-20T${time}:00Z`);
     // Today's session opened at 10:00 and resets at 15:00; $20 per record.
     const today = [at('10:00'), at('11:00'), at('11:55')].map(ts => rec(ts));
@@ -383,30 +383,30 @@ describe('buildSummary', () => {
     // 10 % for $20, 20 % for $40: k = 0.5 %/$.
     const snapshots = [['10:30', 10], ['11:30', 20], ['11:50', 20]].map(([time, fiveHour]) =>
       snap(at(time as string), 30, RESET, { fiveHour: fiveHour as number, fiveHourResetsAt }));
-    const summary = buildSummary({ endpointEnabled: true, now: NOW, planHistory: [], records: [...records, ...today], snapshots, timeZone: 'UTC' });
+    // Each past day's session runs from noon (the daily record) to 17:00 and spends $20 more at 15:00.
+    const afternoons = records.map((_, i) => rec(NOW - (i + 1) * DAY_MS + 3 * HOUR_MS));
+    const forecastOf = (extra: UsageRecord[], planHistory: PlanPeriod[] = []) =>
+      buildSummary({ endpointEnabled: true, now: NOW, planHistory, records: [...records, ...afternoons, ...extra, ...today], snapshots, timeZone: 'UTC' }).fiveHourSession?.forecast;
 
-    expect(summary.fiveHourCalibration?.k).toBeCloseTo(0.5);
-    // The 11:55 record ($20) adds 10 points since the last reading.
-    expect(summary.fiveHourSession?.estimatedNow).toBeCloseTo(30);
-    // Past sessions: one $20 record each, so $4/hour × 0.5 %/$ × 3 hours left = 6 points.
-    expect(summary.fiveHourSession?.forecast).toMatchObject({ method: 'calibrated' });
-    expect(summary.fiveHourSession?.forecast?.median).toBeCloseTo(36);
-  });
+    it('adds what past sessions spent over the rest of the window, from the same elapsed time', () => {
+      const summary = buildSummary({ endpointEnabled: true, now: NOW, planHistory: [], records: [...records, ...afternoons, ...today], snapshots, timeZone: 'UTC' });
+      expect(summary.fiveHourCalibration?.k).toBeCloseTo(0.5);
+      // The 11:55 record ($20) adds 10 points since the last reading.
+      expect(summary.fiveHourSession?.estimatedNow).toBeCloseTo(30);
+      // 2 hours in: past sessions spent $20 from then on (the 15:00 record), × 0.5 %/$ = 10 points. Their whole-window pace would give 12.
+      expect(summary.fiveHourSession?.forecast).toMatchObject({ method: 'calibrated' });
+      expect(summary.fiveHourSession?.forecast?.median).toBeCloseTo(40);
+    });
 
-  it('takes the 5-hour session pace from the sessions under the current plan, once there are 3', () => {
-    const at = (time: string) => Date.parse(`2026-10-20T${time}:00Z`);
-    const today = [at('10:00'), at('11:00'), at('11:55')].map(ts => rec(ts));
-    const fiveHourResetsAt = '2026-10-20T15:00:00.000Z';
-    const snapshots = [['10:30', 10], ['11:30', 20], ['11:50', 20]].map(([time, fiveHour]) =>
-      snap(at(time as string), 30, RESET, { fiveHour: fiveHour as number, fiveHourResetsAt }));
-    // The last 4 days' sessions run at $80 each ($16/hour) against $20 before.
-    const heavy = [1, 2, 3, 4].flatMap(d => [1, 2, 3].map(m => rec(NOW - d * DAY_MS + m * 10 * 60_000)));
-    const upgradeAt = (ms: number): PlanPeriod[] => [{ from: '2026-01-01T00:00:00.000Z', plan: 'pro', source: 'manual' }, { from: new Date(ms).toISOString(), plan: 'max5', source: 'manual' }];
-    const median = (planHistory: PlanPeriod[]) => buildSummary({ endpointEnabled: true, now: NOW, planHistory, records: [...records, ...heavy, ...today], snapshots, timeZone: 'UTC' }).fiveHourSession?.forecast?.median;
-    // Upgraded 4½ days ago: $16/hour × 0.5 %/$ × 3 hours left = 24 points.
-    expect(median(upgradeAt(NOW - 4.5 * DAY_MS))).toBeCloseTo(30 + 24);
-    // Two sessions since a change are too few: the last 28 days stand, mostly $4/hour.
-    expect(median(upgradeAt(NOW - 2.5 * DAY_MS))).toBeCloseTo(36);
+    it('takes the sessions under the current plan, once there are 3', () => {
+      // The last 4 days' sessions also spend $60 late in the window.
+      const heavy = [1, 2, 3, 4].flatMap(d => [1, 2, 3].map(m => rec(NOW - d * DAY_MS + 3 * HOUR_MS + m * 10 * 60_000)));
+      const upgradeAt = (ms: number): PlanPeriod[] => [{ from: '2026-01-01T00:00:00.000Z', plan: 'pro', source: 'manual' }, { from: new Date(ms).toISOString(), plan: 'max5', source: 'manual' }];
+      // Upgraded 4½ days ago: four sessions spent $80 after 2 hours, × 0.5 %/$ = 40 points.
+      expect(forecastOf(heavy, upgradeAt(NOW - 4.5 * DAY_MS))?.median).toBeCloseTo(30 + 40);
+      // Two sessions since a change are too few: the last 28 days stand, mostly $20.
+      expect(forecastOf(heavy, upgradeAt(NOW - 2.5 * DAY_MS))?.median).toBeCloseTo(40);
+    });
   });
 
   it('gives the active use left at the usual active pace', () => {

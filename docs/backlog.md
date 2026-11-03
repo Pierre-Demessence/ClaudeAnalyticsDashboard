@@ -1,6 +1,6 @@
 # Backlog
 
-Next ID: B45
+Next ID: B46
 
 Everything not done yet. One line per item; delete an item in the same commit
 that completes it. Sections say what kind of work an item is; `docs/roadmap.md`
@@ -33,13 +33,13 @@ Improvements to something that exists.
 
 ### Forecast
 
-- B11 `[forecast]` Carry the uncertainty of `k` into the forecast range, so a weakly calibrated plan shows a wider band. Count distinct readings, not all of them: the endpoint repeats the same (%, cost) point while the PC idles, so about two thirds of the points are repeats and would overstate the evidence. The fit itself barely moves without them (`k` 2.2% higher on Pro, 0.2% on Max).
+- B11 `[forecast]` Carry the uncertainty of `k` into the weekly forecast band, so a weakly calibrated plan shows a wider band; check it once B26's weeks exist. On the 5-hour forecast it moved "final in range" only from 34% to 38% over 58 windows, so measure the gain before building it. Count distinct readings, not all of them: the endpoint repeats the same (%, cost) point while the PC idles, so about two thirds of the points are repeats and would overstate the evidence. The fit itself barely moves without them (`k` 2.2% higher on Pro, 0.2% on Max).
 - B12 `[forecast]` Say which limit binds first (5-hour or weekly) and show a probability of hitting each, once the scheduled forecast exists.
 - B13 `[forecast]` Show the current week's own ratio (`CurrentWeek.weekCalibration`) on the Fit card, which shows only the pooled one while the week's forecast, pacing and active time use the week's own.
 - B14 `[forecast]` Check whether the usage endpoint's answer holds per-model weekly windows (`seven_day_opus`, `seven_day_sonnet`) that `src/collector/endpoint.ts:76` ignores: it reads only `seven_day` and its breakdown. A per-model limit would explain weeks of one plan disagreeing on the % per dollar. Max and Ultra also have a weekly Fable limit: Settings > Usage on a Max account shows it as a third bar, "Fable: Up to 50% of your weekly limit", with its own % used and the weekly reset time, so a cap inside the weekly limit, not an extra allowance. Its field in the answer is unknown.
-- B15 `[forecast]` The 5-hour forecast (`src/core/forecast.ts:119`) blends nothing toward the window's own pace, and its samples are whole-window averages, idle tail included, applied to the hours left wherever the window stands. Backtest two variants on the 5-hour windows: the weekly blend toward the own pace, and samples taken from each past window's cost after the same elapsed time, over the hours left.
-- B16 `[forecast]` The 5-hour forecast band is too narrow: its low and high are quartiles, so about half of the final values should land inside, and the backtest puts 34% inside over 58 windows (32% with more than half the window left, 36% with less). Widen it (the uncertainty of `k`, or wider quantiles) until "final in range" (`src/core/backtest.ts:190`) is near half.
+- B15 `[forecast]` The 5-hour forecast (`forecastWindow`) blends nothing toward the window's own pace, as the weekly one does (`ownPaceAfterMs`). Backtest that blend on the 5-hour windows, on top of the tails of past sessions.
 - B17 `[forecast]` Active time per family (`activeByFamily`, `src/core/activeTime.ts:41`) gives each gap to the message that ends it, so subagent bursts (Explore on Haiku) take active time from the Opus main thread: the Opus-only pace reads high, the Haiku one low, and the model ratios inherit it. Measure the share of active time credited to subagent messages; if it is large, build the timeline from main-thread messages and give each subagent's cost to the main thread's family.
+- B45 `[forecast]` Score the dashboard's two warnings in the backtest: a hit is called only when the median projection reaches the threshold (`scoreSamples`, `src/core/backtest.ts`), the "Likely to hit" verdict, while "Tight" (median from `TIGHT_FROM`, `src/dashboard/verdict.ts`) also warns. On the 5-hour forecast with tails, "Likely" alone flags 6 of 14 windows that hit the limit (precision 100%) and "Tight or worse" 11 of 14 (precision 85%).
 
 ### Weeks
 
