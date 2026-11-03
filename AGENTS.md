@@ -120,7 +120,9 @@ Run lint, test and build before considering work done.
   or not. Not refactors, tests, CI, dev dependencies or docs. The release commit
   moves Unreleased under the new version.
 - `docs/backlog.md`: everything not done (bugs, debt, ideas), one line each, with
-  a `file:line` pointer where useful. Something found out of scope goes there at
+  a `file:line` pointer where useful. Each item starts with a `B<n>` ID taken from
+  the `Next ID:` line at the top (then incremented); IDs are never reused or
+  renumbered, so deleting an item leaves a gap. Something found out of scope goes there at
   once instead of being fixed silently; an item is deleted in the commit that
   completes it.
 - `docs/decisions.md`: only decisions where a reader of the code would ask "why
@@ -134,8 +136,8 @@ Run lint, test and build before considering work done.
 - Docs other than `CHANGELOG.md` describe the current state in the present tense:
   no "previously" or "now", no dates, version stamps or changelog lines, no frontmatter. Done items are
   deleted, not ticked or struck through (only an in-progress plan ticks its
-  checklist). Items are referred to by name or tag (`[forensics]`), never by
-  position.
+  checklist). Items are referred to by ID (`B12`), name or tag (`[forensics]`),
+  never by position.
 
 ## Invariants
 

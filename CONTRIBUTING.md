@@ -60,7 +60,7 @@ everyone. The rules that matter most in review:
 | Is noteworthy for users | `CHANGELOG.md`, under Unreleased |
 | Reads a new file or field | The README's "Privacy" table |
 | Completes a backlog item | Delete it from `docs/backlog.md` |
-| Finds a bug or idea you won't fix now | Add one line to `docs/backlog.md` |
+| Finds a bug or idea you won't fix now | Add one line to `docs/backlog.md`, with the next `B<n>` ID |
 | Makes a choice someone would question | `docs/decisions.md` |
 | Changes commands, layout or conventions | `AGENTS.md` |
 
