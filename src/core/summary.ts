@@ -53,6 +53,11 @@ const MIN_PLAN_DAYS = 3;
 const MIN_PLAN_SESSIONS = 3;
 /** From this far into a week, its forecast rests on the week's own pace alone; before, past days steady it. */
 const OWN_PACE_AFTER_MS = 3 * DAY_MS;
+/**
+ * A 5-hour session leans on its own pace by the share of the window elapsed: it starts busier
+ * than it ends, so a faster handover overstates early sessions and raises false alarms.
+ */
+const FIVE_HOUR_OWN_PACE_AFTER_MS = FIVE_HOURS_MS;
 
 export interface SummaryInput {
   endpointEnabled: boolean;
@@ -306,6 +311,7 @@ export function prepareSummary(input: SummaryInput): PreparedSummary {
         fiveHourSession.forecast = forecastWindow({
           asOf,
           k,
+          ownPaceAfterMs: FIVE_HOUR_OWN_PACE_AFTER_MS,
           resetsAt,
           sampleMs: HOUR_MS,
           tailCosts: sessionTailCosts(paceSessions, elapsed, costBetween),

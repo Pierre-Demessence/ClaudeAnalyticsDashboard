@@ -9,11 +9,12 @@ Noteworthy changes for users. The format follows
 ### Changed
 
 - The 5-hour forecast looks at what your past sessions spent from the same point
-  of their run to their end, instead of their average pace over the hours left.
-  Its range now holds the final % in 62% of the tested windows instead of 34%, and
-  its middle estimate is 8.5 points off instead of 12.6. A window headed for the
-  limit more often reads "Tight" than "Likely to hit the limit": together the two
-  flag 11 of the 14 tested windows that hit it, as before.
+  of their run to their end, instead of their average pace over the hours left,
+  and leans more on the current session's own pace as the window runs. Its middle
+  estimate is 7.2 points off instead of 12.6, and its range holds the final % in
+  about half the tested windows, as a range from the likely low to the likely high
+  should (34% before). "Likely to hit the limit" warns for 11 of the 14 tested
+  windows that hit it, with 2 false alarms.
 
 ## [0.4.0]
 

@@ -113,6 +113,29 @@ describe('forecastWindow', () => {
       expect(forecastWindow({ ...fiveHour, asOf: start + HOUR_MS, tailCosts: [5], used: 30 })!.method).toBe('trend');
       expect(forecastWindow({ ...fiveHour, asOf: start + HOUR_MS, k: 2, tailCosts: [], used: 30 })!.method).toBe('trend');
     });
+
+    describe('blending in the window\'s own pace', () => {
+      const tails = { ...fiveHour, k: 2, ownPaceAfterMs: 5 * HOUR_MS, tailCosts: [0, 5, 10, 15, 20] };
+
+      it('leans toward the own pace by the share of the blend time elapsed, keeping the tails\' spread', () => {
+        // 3 hours in: 60 % is 20 points an hour; the tails give 5, 10, 15 points an hour over the 2 left.
+        // Centre 3/5 × 20 + 2/5 × 10 = 16 points an hour.
+        const forecast = forecastWindow({ ...tails, asOf, used: 60 })!;
+        expect(forecast.median).toBeCloseTo(92);
+        expect(forecast.low).toBeCloseTo(82);
+        expect(forecast.high).toBeCloseTo(102);
+      });
+
+      it('matches the tails alone at the window start', () => {
+        const start = resetsAt - 5 * HOUR_MS;
+        const { ownPaceAfterMs: _, ...plain } = tails;
+        expect(forecastWindow({ ...tails, asOf: start, used: 0 })).toEqual(forecastWindow({ ...plain, asOf: start, used: 0 }));
+      });
+
+      it('projects nothing beyond what is used at the reset', () => {
+        expect(forecastWindow({ ...tails, asOf: resetsAt, used: 40 })).toEqual({ high: 40, low: 40, median: 40, method: 'calibrated' });
+      });
+    });
   });
 
   describe('resampling the sum of the periods left', () => {

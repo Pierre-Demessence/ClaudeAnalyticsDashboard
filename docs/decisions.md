@@ -100,7 +100,7 @@ only new bytes are read. A last line without a newline that is not valid JSON
 is still being written and is left for the next run. A file that shrank or
 changed without growing is read again from the start.
 
-## 5-hour forecast: its own calibration and the tails of past sessions
+## 5-hour forecast: its own calibration, the tails of past sessions and its own pace
 
 The 5-hour window is forecast with the weekly method's shell (`forecastWindow`), with
 two inputs of its own. Its % per $ is fitted separately on the 5-hour readings,
@@ -110,8 +110,10 @@ in the fit. Its band is the % used plus the calibrated quartiles of what each
 finished session of the last 4 weeks spent from the same elapsed time to its end
 (`sessionTailCosts`; sessions are rebuilt from message times); after a plan change, the
 sessions since it once there are 3, as for the weekly pace (a smaller plan's limit
-cut its sessions short). Every reading gets the usage since it added back, not only
-stale ones: 15 minutes is 5% of a 5-hour window.
+cut its sessions short). The band's centre leans toward the session's own pace (used %
+over the time elapsed) by the share of the window elapsed (`ownPaceAfterMs` of 5 hours),
+keeping the tails' spread around it. Every reading gets the usage since it added back,
+not only stale ones: 15 minutes is 5% of a 5-hour window.
 
 Rejected: the quartiles of whole-session $/hour (idle time included) × the hours
 left. A session's average mixes its busy start with its idle tail and ignores how far
@@ -121,14 +123,24 @@ window 44%, late 76%) and 8.5 points. Also rejected: carrying the uncertainty of
 into the band, which moved the coverage only from 34% to 38%; resampling sums of
 hours as the weekly forecast does with days, since the hours of a session are not
 independent; and daily cost / 24, which would understate the pace of a session that
-only exists while working. The tails' median is below their mean (many idle
-tails), so the median projection reaches 100% less often: of 14 windows that hit the
-limit, "Likely to hit" announces 6 against 11, with no false alarm against 2 (backtest,
-58 windows). The "Tight" verdict (median from 85%) makes up for it: the two together
-flag 11 of 14 with 2 false alarms, the old scores. Centring the band on the mean tail
-instead was rejected: it flags 9 of 14 and the median error returns to 12.7 points.
-Calling a hit from a point of the band between the median and the high end recovers the
-recall only with a number tuned on 14 hit windows.
+only exists while working.
+
+The tails alone are not enough: their median is below their mean (many idle tails), so
+the median projection seldom reaches 100%. Of 14 windows that hit the limit, "Likely to
+hit" (median from 100%) warned for 5 with no false alarm, and "Tight or worse" (median
+from `TIGHT_FROM`) for 10 with 2 (backtest, 59 windows, one call each). With the own pace
+blended in, "Likely" warns for 11 with 2 false alarms, the median error is 7.2 points and
+51% of finals land in the band, about the half a quartile band should hold (62% on the
+tails alone: too wide); at one call an hour (76 windows, 337 calls), "Likely"
+catches 67% of the calls on windows that hit, against 42%, and is right 84% of the time,
+against 96%. The false alarms are sessions that slowed down and ended at 70–84%: a
+session starts busier than it ends. Rejected: a faster handover, the own pace alone
+after 2 hours (the weekly forecast's share, 3 days of 7). "Likely" then catches 78% of
+the calls but is right 77% of the time, and "Tight" adds 2 catches for 19 more false
+alarms, so it stops meaning anything. Also rejected, on the tails alone: centring the
+band on the mean tail (9 of 14 flagged, median error back to 12.7 points), and calling
+a hit from a point of the band between the median and the high end, which recovers
+the recall only with a number tuned on 14 hit windows.
 
 ## Active use left: pace per active hour, pauses over 15 minutes excluded
 

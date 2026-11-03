@@ -6,6 +6,7 @@ import type { Snapshot, UsageRecord } from './types.ts';
 
 import { fiveHourFinals, formatReport, runBacktest, scoreSamples, weeklyFinals } from './backtest.ts';
 import { DAY_MS, FIVE_HOURS_MS, HOUR_MS, WEEK_MS } from './calibration.ts';
+import { TIGHT_FROM } from './forecast.ts';
 
 const T0 = Date.parse('2026-09-01T00:00:00Z');
 
@@ -83,10 +84,21 @@ describe('scoreSamples', () => {
     expect(score!.coverage).toBe(0.25);
   });
 
-  it('scores the limit-hit call', () => {
-    expect(score!.hit).toEqual({ falseNegatives: 1, falsePositives: 1, truePositives: 1 });
-    expect(score!.precision).toBe(0.5);
-    expect(score!.recall).toBe(0.5);
+  it('scores the "Likely to hit" warning', () => {
+    expect(score!.likely).toEqual({ falseNegatives: 1, falsePositives: 1, precision: 0.5, recall: 0.5, truePositives: 1 });
+  });
+
+  it('warns "Likely" from a median of 100 and "Tight or worse" from TIGHT_FROM, not from the limit threshold', () => {
+    const [only] = scoreSamples([
+      // Reaches the threshold (95) but not 100: no "Likely" verdict, only "Tight".
+      sample({ final: 99, median: 97 }),
+      sample({ final: 99, median: TIGHT_FROM }),
+      sample({ final: 99, median: TIGHT_FROM - 1 }),
+      // A window ending under the threshold, warned tight: a false alarm of that warning only.
+      sample({ final: 80, median: 90 }),
+    ], { fiveHour: 95, weekly: 95 });
+    expect(only!.likely).toMatchObject({ falseNegatives: 3, falsePositives: 0, truePositives: 0 });
+    expect(only!.tight).toMatchObject({ falseNegatives: 1, falsePositives: 1, truePositives: 2 });
   });
 
   it('counts samples and distinct windows', () => {
@@ -107,10 +119,11 @@ describe('scoreSamples', () => {
     expect(keys).not.toContain('weekly/calibrated/late');
   });
 
-  it('gives no precision without predicted hits', () => {
+  it('gives no precision without warnings and no recall without hits', () => {
     const [only] = scoreSamples([sample({ final: 10, median: 20 })], { fiveHour: 95, weekly: 98 });
-    expect(only!.precision).toBeUndefined();
-    expect(only!.recall).toBeUndefined();
+    expect(only!.likely.precision).toBeUndefined();
+    expect(only!.likely.recall).toBeUndefined();
+    expect(only!.tight.precision).toBeUndefined();
   });
 });
 
@@ -243,6 +256,8 @@ describe('formatReport', () => {
     expect(text).toContain('calibrated');
     expect(text).toContain('3 weekly');
     expect(text).toContain('2 5-hour');
+    expect(text).toContain('likely: precision 100%, recall 100%');
+    expect(text).toContain('tight or worse: precision 100%');
   });
 
   it('says so when there is nothing to score', () => {

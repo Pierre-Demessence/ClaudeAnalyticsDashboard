@@ -3,6 +3,7 @@ import type { DashboardSummary, SummaryInput } from './summary.ts';
 import type { PlanPeriod, Snapshot, UsageRecord } from './types.ts';
 
 import { FIVE_HOURS_MS, HOUR_MS, WEEK_MS } from './calibration.ts';
+import { TIGHT_FROM } from './forecast.ts';
 import { windowParts } from './restarts.ts';
 import { FINAL_READING_MS } from './share.ts';
 import { median } from './stats.ts';
@@ -34,21 +35,31 @@ export interface BacktestSample {
   resetsAt: number;
 }
 
+/** How one of the dashboard's warnings did against the windows that really hit the limit. */
+export interface WarningScore {
+  falseNegatives: number;
+  falsePositives: number;
+  /** Of the samples warned, the share whose window hit the limit; absent when none were warned. */
+  precision?: number;
+  /** Of the samples whose window hit the limit, the share warned; absent when none hit. */
+  recall?: number;
+  truePositives: number;
+}
+
 export interface BacktestScore {
   /** Share of finals inside [low, high]. */
   coverage: number;
-  hit: { falseNegatives: number; falsePositives: number; truePositives: number };
   kind: WindowKind;
+  /** The "Likely to hit the limit" verdict: the median projection reaches 100 %. */
+  likely: WarningScore;
   /** `early`: more than half the window was left at the call. */
   lead: 'all' | 'early' | 'late';
   /** Median over samples of |projected median − final|, in % points, both capped at 100. */
   medianAbsError: number;
   method: WindowForecast['method'];
-  /** Of the windows predicted to hit the limit, the share that did; absent when none were predicted. */
-  precision?: number;
-  /** Of the windows that hit the limit, the share predicted to; absent when none hit. */
-  recall?: number;
   samples: number;
+  /** The "Tight" verdict or worse: the median projection reaches `TIGHT_FROM`. */
+  tight: WarningScore;
   /** Distinct windows behind the samples; samples of one window overlap heavily. */
   windows: number;
 }
@@ -151,6 +162,28 @@ function finalFor(finals: ReadonlyMap<number, number>, resetsAt: number): number
 
 const cap = (percent: number) => Math.min(100, percent);
 
+/** A warning from `warnFrom` (median projection), against the windows whose final reached `threshold`. */
+function warningScore(list: readonly BacktestSample[], warnFrom: number, threshold: number): WarningScore {
+  const score: WarningScore = { falseNegatives: 0, falsePositives: 0, truePositives: 0 };
+  for (const s of list) {
+    const warned = cap(s.median) >= warnFrom;
+    const actual = s.final >= threshold;
+    if (warned && actual)
+      score.truePositives++;
+    else if (warned)
+      score.falsePositives++;
+    else if (actual)
+      score.falseNegatives++;
+  }
+  const warnedCount = score.truePositives + score.falsePositives;
+  const actualCount = score.truePositives + score.falseNegatives;
+  if (warnedCount > 0)
+    score.precision = score.truePositives / warnedCount;
+  if (actualCount > 0)
+    score.recall = score.truePositives / actualCount;
+  return score;
+}
+
 /** Scores per window kind, method and lead; groups without samples are left out. */
 export function scoreSamples(samples: readonly BacktestSample[], thresholds: Thresholds): BacktestScore[] {
   const groups = new Map<string, { lead: BacktestScore['lead']; list: BacktestSample[] }>();
@@ -169,32 +202,17 @@ export function scoreSamples(samples: readonly BacktestSample[], thresholds: Thr
   return [...groups.entries()].map(([key, { lead, list }]) => {
     const [kind, method] = key.split('|') as [WindowKind, WindowForecast['method']];
     const threshold = thresholds[kind];
-    const hit = { falseNegatives: 0, falsePositives: 0, truePositives: 0 };
-    let inRange = 0;
-    for (const s of list) {
-      if (cap(s.low) <= s.final && s.final <= cap(s.high))
-        inRange++;
-      const predicted = cap(s.median) >= threshold;
-      const actual = s.final >= threshold;
-      if (predicted && actual)
-        hit.truePositives++;
-      else if (predicted)
-        hit.falsePositives++;
-      else if (actual)
-        hit.falseNegatives++;
-    }
-    const predictedHits = hit.truePositives + hit.falsePositives;
-    const actualHits = hit.truePositives + hit.falseNegatives;
+    const inRange = list.filter(s => cap(s.low) <= s.final && s.final <= cap(s.high)).length;
     return {
       coverage: inRange / list.length,
-      hit,
       kind,
       lead,
+      // The dashboard's two warnings, not the limit threshold: a window counts as a hit from the threshold, but no verdict warns from it.
+      likely: warningScore(list, 100, threshold),
       medianAbsError: median(list.map(s => Math.abs(cap(s.median) - s.final)))!,
       method,
-      precision: predictedHits > 0 ? hit.truePositives / predictedHits : undefined,
-      recall: actualHits > 0 ? hit.truePositives / actualHits : undefined,
       samples: list.length,
+      tight: warningScore(list, TIGHT_FROM, threshold),
       windows: new Set(list.map(s => s.resetsAt)).size,
     };
   });
@@ -275,6 +293,10 @@ export function runBacktest(input: BacktestInput): BacktestReport {
 
 const percent = (value: number | undefined) => (value === undefined ? 'n/a' : `${Math.round(value * 100)}%`);
 
+function formatWarning(label: string, w: WarningScore) {
+  return `${label}: precision ${percent(w.precision)}, recall ${percent(w.recall)} (tp ${w.truePositives}, fp ${w.falsePositives}, fn ${w.falseNegatives})`;
+}
+
 /** The report as text, one line per score. */
 export function formatReport({ leftOut, scores }: BacktestReport): string {
   if (scores.length === 0)
@@ -288,8 +310,8 @@ export function formatReport({ leftOut, scores }: BacktestReport): string {
     `${String(s.samples).padStart(5)} samples`,
     `median error ${s.medianAbsError.toFixed(1)} pts`,
     `final in range ${percent(s.coverage)}`,
-    `limit hit: precision ${percent(s.precision)}, recall ${percent(s.recall)}`,
-    `(tp ${s.hit.truePositives}, fp ${s.hit.falsePositives}, fn ${s.hit.falseNegatives})`,
+    formatWarning('likely', s.likely),
+    formatWarning('tight or worse', s.tight),
   ].join('  '));
   lines.push('', `Left out for lack of a final value: ${leftOut.weekly} weekly, ${leftOut.fiveHour} 5-hour windows.`);
   return lines.join('\n');

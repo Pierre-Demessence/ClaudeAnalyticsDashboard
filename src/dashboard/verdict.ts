@@ -1,5 +1,6 @@
 import type { WindowForecast } from '@/core/forecast';
 
+import { TIGHT_FROM } from '@/core/forecast';
 import { formatDollars, formatDuration, formatPercent, formatResets } from '@/dashboard/format';
 
 /** Drives the verdict icon, the card's color band and the verdict box's tint. */
@@ -10,9 +11,6 @@ export interface Verdict {
   kind: VerdictKind;
   title: string;
 }
-
-/** Median projection from which the window is called tight. */
-const TIGHT_FROM = 85;
 
 interface VerdictInput {
   forecast?: WindowForecast;

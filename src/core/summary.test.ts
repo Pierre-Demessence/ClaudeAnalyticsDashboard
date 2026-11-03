@@ -393,19 +393,21 @@ describe('buildSummary', () => {
       expect(summary.fiveHourCalibration?.k).toBeCloseTo(0.5);
       // The 11:55 record ($20) adds 10 points since the last reading.
       expect(summary.fiveHourSession?.estimatedNow).toBeCloseTo(30);
-      // 2 hours in: past sessions spent $20 from then on (the 15:00 record), × 0.5 %/$ = 10 points. Their whole-window pace would give 12.
+      // 2 hours in: past sessions spent $20 from then on (the 15:00 record), × 0.5 %/$ = 10 points over the 3 hours left.
+      // The session's own pace, 30 % in 2 hours, weighs 2/5: (2/5 × 15 + 3/5 × 10/3) points an hour × 3 = 24 points.
       expect(summary.fiveHourSession?.forecast).toMatchObject({ method: 'calibrated' });
-      expect(summary.fiveHourSession?.forecast?.median).toBeCloseTo(40);
+      expect(summary.fiveHourSession?.forecast?.median).toBeCloseTo(30 + 24);
     });
 
     it('takes the sessions under the current plan, once there are 3', () => {
       // The last 4 days' sessions also spend $60 late in the window.
       const heavy = [1, 2, 3, 4].flatMap(d => [1, 2, 3].map(m => rec(NOW - d * DAY_MS + 3 * HOUR_MS + m * 10 * 60_000)));
       const upgradeAt = (ms: number): PlanPeriod[] => [{ from: '2026-01-01T00:00:00.000Z', plan: 'pro', source: 'manual' }, { from: new Date(ms).toISOString(), plan: 'max5', source: 'manual' }];
-      // Upgraded 4½ days ago: four sessions spent $80 after 2 hours, × 0.5 %/$ = 40 points.
-      expect(forecastOf(heavy, upgradeAt(NOW - 4.5 * DAY_MS))?.median).toBeCloseTo(30 + 40);
+      // Upgraded 4½ days ago: four sessions spent $80 after 2 hours, × 0.5 %/$ = 40 points over 3 hours,
+      // blended with the own pace as above: (2/5 × 15 + 3/5 × 40/3) × 3 = 42 points.
+      expect(forecastOf(heavy, upgradeAt(NOW - 4.5 * DAY_MS))?.median).toBeCloseTo(30 + 42);
       // Two sessions since a change are too few: the last 28 days stand, mostly $20.
-      expect(forecastOf(heavy, upgradeAt(NOW - 2.5 * DAY_MS))?.median).toBeCloseTo(40);
+      expect(forecastOf(heavy, upgradeAt(NOW - 2.5 * DAY_MS))?.median).toBeCloseTo(30 + 24);
     });
   });
 

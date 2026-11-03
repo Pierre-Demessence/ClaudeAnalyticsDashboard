@@ -1,6 +1,6 @@
 # Backlog
 
-Next ID: B46
+Next ID: B47
 
 Everything not done yet. One line per item; delete an item in the same commit
 that completes it. Sections say what kind of work an item is; `docs/roadmap.md`
@@ -37,9 +37,8 @@ Improvements to something that exists.
 - B12 `[forecast]` Say which limit binds first (5-hour or weekly) and show a probability of hitting each, once the scheduled forecast exists.
 - B13 `[forecast]` Show the current week's own ratio (`CurrentWeek.weekCalibration`) on the Fit card, which shows only the pooled one while the week's forecast, pacing and active time use the week's own.
 - B14 `[forecast]` Check whether the usage endpoint's answer holds per-model weekly windows (`seven_day_opus`, `seven_day_sonnet`) that `src/collector/endpoint.ts:76` ignores: it reads only `seven_day` and its breakdown. A per-model limit would explain weeks of one plan disagreeing on the % per dollar. Max and Ultra also have a weekly Fable limit: Settings > Usage on a Max account shows it as a third bar, "Fable: Up to 50% of your weekly limit", with its own % used and the weekly reset time, so a cap inside the weekly limit, not an extra allowance. Its field in the answer is unknown.
-- B15 `[forecast]` The 5-hour forecast (`forecastWindow`) blends nothing toward the window's own pace, as the weekly one does (`ownPaceAfterMs`). Backtest that blend on the 5-hour windows, on top of the tails of past sessions.
+- B46 `[forecast]` The 5-hour forecast's own pace counts from the window start (`forecastWindow` gets no `startsAt` for the 5-hour window, `src/core/summary.ts`), but a restart that keeps the reset time (the Pro to Max upgrade read 100% then 0% in the same 5-hour window) empties the %: after it, the own pace reads low and the blend pulls the projection down. `windowParts` (`src/core/restarts.ts`) splits weekly windows only; split the 5-hour window the same way and pass its running part's start.
 - B17 `[forecast]` Active time per family (`activeByFamily`, `src/core/activeTime.ts:41`) gives each gap to the message that ends it, so subagent bursts (Explore on Haiku) take active time from the Opus main thread: the Opus-only pace reads high, the Haiku one low, and the model ratios inherit it. Measure the share of active time credited to subagent messages; if it is large, build the timeline from main-thread messages and give each subagent's cost to the main thread's family.
-- B45 `[forecast]` Score the dashboard's two warnings in the backtest: a hit is called only when the median projection reaches the threshold (`scoreSamples`, `src/core/backtest.ts`), the "Likely to hit" verdict, while "Tight" (median from `TIGHT_FROM`, `src/dashboard/verdict.ts`) also warns. On the 5-hour forecast with tails, "Likely" alone flags 6 of 14 windows that hit the limit (precision 100%) and "Tight or worse" 11 of 14 (precision 85%).
 
 ### Weeks
 

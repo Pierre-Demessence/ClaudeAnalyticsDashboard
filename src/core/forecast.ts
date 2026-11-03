@@ -22,7 +22,7 @@ export interface ForecastInput {
   /**
    * Time from the window start after which the window's own pace (used % over the
    * time elapsed) replaces the typical pace; before it, the two blend linearly.
-   * The band keeps the spread of the typical pace around the blend. With `resampleSum` only.
+   * The band keeps the spread of the typical pace around the blend. With `resampleSum` or `tailCosts` only.
    */
   ownPaceAfterMs?: number;
   /** Recent costs per `sampleMs`, idle periods included: the spread of the typical pace. Absent with `tailCosts`. */
@@ -52,6 +52,12 @@ export interface ForecastInput {
   used: number;
   windowMs: number;
 }
+
+/**
+ * Median projection (%) from which a window is called tight: the dashboard's warning
+ * short of "Likely to hit", scored by the backtest.
+ */
+export const TIGHT_FROM = 85;
 
 /** Trend forecasts before this share of the window has passed are noise: half a day of a week, about 20 minutes of 5 hours. */
 const MIN_TREND_SHARE = 1 / 14;
@@ -119,6 +125,8 @@ export function forecastWindow({ asOf, k, ownPaceAfterMs, paceSamples = [], resa
     rates = periodsLeft > 0
       ? [0.25, 0.5, 0.75].map(q => quantile(tailCosts, q)! * k / periodsLeft) as [number, number, number]
       : [0, 0, 0];
+    if (ownPaceAfterMs !== undefined && periodsLeft > 0)
+      rates = blendOwnPace(rates, used, Math.max(0, asOf - startsAt) / sampleMs, ownPaceAfterMs / sampleMs);
   }
   else if (k !== undefined && paceSamples.length > 0 && resampleSum) {
     method = 'calibrated';
