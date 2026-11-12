@@ -31,6 +31,34 @@ folder with `CCA_DATA_DIR`: `npm run dev` and `npm run collect` run your working
 copy's collector on that folder. The Claude Code hook never runs your working
 copy; it asks the Docker dashboard, which runs the version it was built from.
 
+| Script | Description |
+| --- | --- |
+| `npm run dev` | Dashboard with hot reload. |
+| `npm run dashboard` | Build and open the dashboard (`vite preview`). |
+| `npm run collect` | Run the collector once (`-- --force` skips the endpoint throttle). |
+| `npm run backtest` | Replay the forecasts on your data and score them. |
+| `npm run hook:install` | Print the hook for the Docker dashboard (`-- --apply` adds it). |
+| `npm run docker:up` | Build and (re)start the always-on Docker dashboard. |
+| `npm run image:check` | Build the Docker image and run it from `docker/compose.yaml` on temp dirs. |
+| `npm run widget:dev` | Run the taskbar widget from the source; redraws when `widget/widget.svg` is saved. |
+| `npm run widget:install` | Build the taskbar widget and install it for the user. |
+| `npm run widget:test` | Test and lint the widget (`cargo test`, `clippy`). |
+| `npm run build` | Type-check, then build. |
+| `npm run lint` | Lint with ESLint (`lint:fix` to auto-fix). |
+| `npm test` | Run Vitest once (`test:watch`, `test:coverage`). |
+
+**Always-on dashboard from a clone.** `npm run docker:up` builds the image from your
+working copy and serves it at <http://analytics.claudecode.localhost>. It needs a
+running Traefik joined to an external `claudecodeanalytics` network that no other
+container joins. Run it again after updating, and only on code you trust: the
+collector can read your login token. `npm run hook:install -- --apply` points
+Claude Code's hook at it; without a hook, any running dashboard imports every minute.
+
+**Widget from a clone.** `npm run widget:install` builds it (Rust from `mise install`,
+plus the Visual Studio C++ build tools), copies it to
+`%LOCALAPPDATA%\Claude Analytics Dashboard Widget` and starts it. Only one widget
+runs at a time: quit the installed one before `widget:dev` or a new `widget:install`.
+
 ## Making a change
 
 [`AGENTS.md`](AGENTS.md) holds the project's conventions: layout, imports,
@@ -57,7 +85,7 @@ everyone. The rules that matter most in review:
 | If your change… | Update |
 | --- | --- |
 | Changes what users see or do | `README.md`, if it describes it |
-| Is noteworthy for users | `CHANGELOG.md`, under Unreleased |
+| Is noteworthy for users | `CHANGELOG.md`, under Unreleased: one line saying what users see, plus any action they must take |
 | Reads a new file or field | The README's "Privacy" table |
 | Completes a backlog item | Delete it from `docs/backlog.md` |
 | Finds a bug or idea you won't fix now | Add one line to `docs/backlog.md`, with the next `B<n>` ID |

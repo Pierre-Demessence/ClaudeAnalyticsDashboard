@@ -25,6 +25,60 @@ limits, and shows where the usage goes. Nothing leaves your machine.
 - **Private by design**: never stores message content; anonymize mode for screenshots.
 - Light and dark themes, colorblind-friendly charts (every series has a texture).
 
+## Install
+
+Requires Node ≥ 22.18, on Windows, macOS or Linux. Without Node, use
+[Docker](#docker) instead.
+
+```sh
+npm install -g claude-analytics-dashboard
+claude-analytics-dashboard setup
+```
+
+`setup` adds a hook to Claude Code that keeps the dashboard running whenever you
+use Claude Code, and opens it at <http://localhost:4747>. The hook uses none of
+your usage and adds nothing to your conversations.
+
+- **Update:** `npm install -g claude-analytics-dashboard@latest`, then
+  `claude-analytics-dashboard start --background --no-open`.
+- **Uninstall:** delete the Stop hook that posts to `localhost:4747/api/hook` from
+  `~/.claude/settings.json` (or it restarts the dashboard), then run
+  `claude-analytics-dashboard stop` and `npm uninstall -g claude-analytics-dashboard`.
+- **Other commands:** `claude-analytics-dashboard` alone runs it in the terminal
+  (Ctrl+C stops it); `install-hook` prints the hook (`--apply` adds it).
+  `CCA_PORT` changes the port.
+
+Your history lives in `~/.claude-code-analytics/` (`CCA_DATA_DIR` changes it). It
+survives updates and uninstalls, and keeps your messages after Claude Code deletes
+its old transcripts.
+
+### Docker
+
+Needs only Docker (Docker Desktop on Windows and macOS), on x64 or ARM.
+
+```sh
+mkdir claude-analytics-dashboard && cd claude-analytics-dashboard
+curl -fsSLO https://raw.githubusercontent.com/Pierre-Demessence/ClaudeAnalyticsDashboard/main/docker/compose.yaml
+docker compose up -d
+```
+
+In PowerShell, type `curl.exe`. The dashboard answers at <http://localhost:4747>,
+imports your transcripts every minute (no hook needed) and restarts with Docker.
+
+- **Update:** `docker compose pull`, then `docker compose up -d`.
+- **Uninstall:** `docker compose down`.
+- **Linux:** create `~/.claude-code-analytics` before the first `up`. If your user
+  id isn't 1000, add `user: "<uid>:<gid>"` under `dashboard` in the compose file.
+- Run either Docker or the npm package, not both: they share port 4747.
+
+### Limit readings
+
+The forecasts need your current % of each limit, set in the Calibration tab:
+type in what `/usage` shows from time to time, or turn on the usage endpoint
+(opt-in; Claude Code's undocumented endpoint, called with your login token, see
+[Privacy](#privacy)), which reads the same numbers every 15 minutes. Everything
+else works without readings.
+
 ## Tour
 
 <table>
@@ -65,53 +119,22 @@ limits, and shows where the usage goes. Nothing leaves your machine.
 Also: **Weeks** (the last 12 weekly windows, day by day) and **Calibration**
 (limit readings, settings and how well the forecasts fit them).
 
-## Install
+## Taskbar widget (Windows)
 
-Requires Node ≥ 22.18, on Windows, macOS or Linux. Without Node, use the
-[Docker image](#always-on-dashboard-docker) instead.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/widget-dark.png">
+  <img alt="Taskbar widget: 5-hour usage at 26% resetting in 4h30m, weekly usage at 29% resetting in 5d03h" src="docs/screenshots/widget-light.png" width="300">
+</picture>
 
-```sh
-npm install -g claude-analytics-dashboard
-claude-analytics-dashboard setup
-```
+Both limits next to the clock, with the time to reset. Click to open the
+dashboard; right-click for "Start with Windows" and "Quit". It shows the data of
+the running dashboard, npm or Docker.
 
-`setup` adds a Stop hook to `~/.claude/settings.json` (with a backup), starts the
-dashboard in the background and opens it at <http://localhost:4747> (`CCA_PORT`
-changes the port). After every Claude Code response, the hook asks the dashboard to
-import new transcripts, in the background; if the dashboard is not running, the hook
-starts it, with no window. So the dashboard is up whenever you use Claude Code, and
-you never start it by hand. Neither uses any of your usage: they read files Claude
-Code already writes and never call Claude, and the hook adds nothing to your
-conversation.
-
-Other commands: `claude-analytics-dashboard` runs the dashboard in the terminal and
-opens it (Ctrl+C stops it), `claude-analytics-dashboard stop` stops a running one
-(the hook starts it again after the next Claude Code response), and `install-hook`
-prints the hook instead of adding it (`--apply` adds it).
-
-**Update.** `npm install -g claude-analytics-dashboard@latest`, then run
-`claude-analytics-dashboard start --background --no-open`: it replaces a running
-older dashboard with the new one. Your data is kept.
-
-**Uninstall.** Delete the Stop hook that posts to `localhost:4747/api/hook` from
-`~/.claude/settings.json` (otherwise it restarts the dashboard), run
-`claude-analytics-dashboard stop`, then `npm uninstall -g claude-analytics-dashboard`. Your history stays in
-`~/.claude-code-analytics/` until you delete that folder.
-
-**Limit readings.** The % of your limits comes from one of two sources, set in
-the Calibration tab:
-
-- **Manual**: type in what `/usage` shows from time to time.
-- **Usage endpoint** (opt-in): reads the numbers behind `/usage` automatically,
-  at most every 15 minutes. It uses Claude Code's undocumented endpoint and your
-  login token; see [Privacy](#privacy). Like `/usage`, it only reads the
-  numbers and costs no usage.
-
-The forecasts appear after a few readings; until then, everything else already works.
-
-Collected data lives in `~/.claude-code-analytics/` (override with
-`CCA_DATA_DIR`). Claude Code deletes old transcripts after `cleanupPeriodDays`
-(in `~/.claude/settings.json`), but messages already imported are kept.
+Download `cca-widget.exe` from the
+[latest release](https://github.com/Pierre-Demessence/ClaudeAnalyticsDashboard/releases/latest),
+put it somewhere it can stay, and run it. Windows SmartScreen asks once, since the
+exe is not signed: choose "More info", then "Run anyway". To update, quit it and
+replace the exe.
 
 ## Privacy
 
@@ -124,135 +147,29 @@ once you turn it on.
 | `~/.claude/projects/**/*.meta.json` | A subagent's type, never its description. | Every collector run |
 | `~/.claude.json` (or `~/.claude/.claude.json`) | `subscriptionCreatedAt` only (the billing day, unless the plan history sets it), never the email or account ids. | Every collector run |
 | `~/.claude/.credentials.json` | The OAuth access token, its expiry, the plan type and rate-limit tier. | Only with the usage endpoint on |
-| `~/.claude/settings.json` | Read and edited, with a backup, to add the hook. | Only when you run `setup` or `install-hook --apply` (`hook:install -- --apply` from a clone) |
+| `~/.claude/settings.json` | Read and edited, with a backup, to add the hook. | Only when you run `setup` or `install-hook --apply` |
 
 The token is held in memory, sent only to
 `https://api.anthropic.com/api/oauth/usage`, and never logged, stored or
-refreshed: Claude Code refreshes it. The whole client is
-[`src/collector/endpoint.ts`](src/collector/endpoint.ts).
+refreshed. The whole client is [`src/collector/endpoint.ts`](src/collector/endpoint.ts).
+The Docker setup listens on `127.0.0.1` only and mounts `~/.claude` read-only.
 
 The eye button in the header masks project names, paths, branches and
 conversation titles, for sharing screenshots like the ones above.
 
 ## Good to know
 
-- Usage is priced at public API rates, as a common unit across models. Plan
+- Usage is priced at public API rates, as a common unit across models; plan
   limits are assumed to scale with those prices.
-- Only this machine's transcripts are counted. claude.ai chat usage counts
-  toward the same limits: the endpoint separates it, and a manual reading can
-  too; otherwise it is counted as Claude Code.
-- Other plans' figures are approximate, from Anthropic's advertised weekly limits
-  (Max is 5× Pro, Ultra 10× Pro); the Plans tab shows how well your own weeks
-  match them. Ultra has no 5-hour limit, so a session counts as over a limit only
-  when both plans have one (Pro and Max). An Ultra account is treated as having
-  none unless a reading of the last week carries a 5-hour window (an account not
-  verified yet); the Overview and the widget then say so.
-- When your usage restarts inside a week (an upgrade, a free reset), the week is
-  split there: the projection and the pacing start again from the restart, and the
-  week's peak adds the parts up.
-- When a reading is old, the dashboard says so and estimates the usage since
-  from transcripts.
+- Only this machine's transcripts count. claude.ai chat shares your limits: the
+  usage endpoint tells it apart, otherwise it counts as Claude Code.
+- Other plans' figures are estimates from Anthropic's advertised limits.
 
-## Extras
+## Contributing
 
-### Taskbar widget (Windows)
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/widget-dark.png">
-  <img alt="Taskbar widget: 5-hour usage at 26% resetting in 4h30m, weekly usage at 29% resetting in 5d03h" src="docs/screenshots/widget-light.png" width="300">
-</picture>
-
-Docked left of the notification area: both limits as a bar, a percent and the
-time to reset. Click it to open the dashboard; right-click for "Start with
-Windows" and "Quit". A small native process (about 10 MB). It shows the data of
-the dashboard that answers: the npm one on port 4747, which the hook starts
-whenever Claude Code is used, or the [Docker one](#always-on-dashboard-docker).
-
-Download `cca-widget.exe` from the
-[latest release](https://github.com/Pierre-Demessence/ClaudeAnalyticsDashboard/releases/latest)
-and run it. The exe is not signed, so Windows SmartScreen asks once: choose "More
-info", then "Run anyway". "Start with Windows" starts the exe where it is, so put
-it where it can stay. To update, quit the widget and replace the exe with the new one.
-
-From a clone, `npm run widget:install` builds it (needs
-[Rust](https://www.rust-lang.org/), `mise install`, and the Visual Studio C++ build
-tools), copies it to `%LOCALAPPDATA%\Claude Analytics Dashboard Widget` and starts it.
-
-Only one widget runs at a time: quit the installed one before `widget:dev` or a
-new `widget:install`.
-
-### Always-on dashboard (Docker)
-
-The install for someone without Node: only Docker (Docker Desktop on Windows and
-macOS). Each release publishes an image for `linux/amd64` and `linux/arm64`.
-
-```sh
-mkdir claude-analytics-dashboard && cd claude-analytics-dashboard
-curl -fsSLO https://raw.githubusercontent.com/Pierre-Demessence/ClaudeAnalyticsDashboard/main/docker/compose.yaml
-docker compose up -d
-```
-
-In PowerShell, write `curl.exe` (plain `curl` is another command there). The dashboard
-answers at <http://localhost:4747>, shows your history within a minute and restarts with
-Docker. The container imports your transcripts every minute while it runs, so no hook is
-needed; adding one would mean editing `~/.claude/settings.json` by hand, since the
-container only reads `~/.claude`. Limit readings work as in [Install](#install).
-
-- **Update:** `docker compose pull`, then `docker compose up -d`. Your data is kept.
-- **Uninstall:** `docker compose down`; your history stays in `~/.claude-code-analytics/`
-  until you delete that folder.
-- **Linux:** create `~/.claude-code-analytics` before the first `up`, or Docker creates it
-  as root and the container cannot write to it. The container runs as user id 1000: if
-  yours differs, add `user: "<your uid>:<your gid>"` under `dashboard` in the compose file.
-- **Port 4747** is also the npm package's: run one of them. The taskbar widget and the
-  hook find either.
-- The compose file publishes the port on `127.0.0.1` only and mounts `~/.claude` read-only.
-  The container can read your login token when the usage endpoint is on: see [Privacy](#privacy).
-
-### Always-on dashboard (Docker, from a clone)
-
-An alternative for contributors, built from the working copy: `npm run docker:up` builds the image and serves the dashboard at
-<http://analytics.claudecode.localhost>. Needs Docker Desktop and a running
-Traefik reverse proxy joined to an external `claudecodeanalytics` network, which
-no other container joins, so no other container can call the dashboard's API.
-The container mounts `~/.claude` read-only and `~/.claude-code-analytics`, and
-runs the collector every minute and when the hook asks. It runs the version it
-was built from: run `npm run docker:up` again after updating, and only on code
-you trust, since the collector can read your login token.
-
-## Development
-
-```sh
-git clone https://github.com/Pierre-Demessence/ClaudeAnalyticsDashboard.git
-cd ClaudeAnalyticsDashboard
-npm install
-npm run dev # dashboard with hot reload
-```
-
-`npm run hook:install -- --apply` adds a hook that asks the Docker dashboard to
-import after every response; it runs no code from the clone, so a branch checked
-out here never runs on its own. Without a hook, any running dashboard imports
-every minute.
-
-| Script | Description |
-| --- | --- |
-| `npm run dev` | Dashboard with hot reload. |
-| `npm run dashboard` | Build and open the dashboard (`vite preview`). |
-| `npm run collect` | Run the collector once (`-- --force` skips the endpoint throttle). |
-| `npm run backtest` | Replay the forecasts on your data and score them. |
-| `npm run docker:up` | Build and (re)start the always-on Docker dashboard. |
-| `npm run image:check` | Build the Docker image and run it from `docker/compose.yaml` on temp dirs. |
-| `npm run widget:dev` | Run the taskbar widget from the source; redraws when `widget/widget.svg` is saved. |
-| `npm run widget:install` | Build the taskbar widget and install it for the user. |
-| `npm run widget:test` | Test and lint the widget (`cargo test`, `clippy`). |
-| `npm run build` | Type-check, then build. |
-| `npm run lint` | Lint with ESLint (`lint:fix` to auto-fix). |
-| `npm test` | Run Vitest once (`test:watch`, `test:coverage`). |
-
-Built with Vite, React and TypeScript, scaffolded with
-[create-corniflex](https://github.com/Pierre-Demessence/create-corniflex). The
-widget is Rust. Project docs: [backlog](docs/backlog.md) and
-[decisions](docs/decisions.md); agent notes: [AGENTS.md](AGENTS.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md). Built with Vite, React and TypeScript,
+scaffolded with [create-corniflex](https://github.com/Pierre-Demessence/create-corniflex);
+the widget is Rust.
 
 ## License
 

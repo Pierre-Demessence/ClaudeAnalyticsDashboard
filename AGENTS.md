@@ -134,12 +134,15 @@ Run lint, test and build before considering work done.
 
 ## Docs
 
-- `README.md`: what users see and do. Its "Privacy" table lists everything the
+- `README.md`: what users see and do, short enough to skim; contributor setup and
+  scripts live in `CONTRIBUTING.md`. Its "Privacy" table lists everything the
   collector reads; a change reading a new file or field updates it.
 - `CHANGELOG.md`: every change a user can notice (a feature, a fix, a different
   number or behavior), under Unreleased, in the commit that makes it, pull request
-  or not. Not refactors, tests, CI, dev dependencies or docs. The release commit
-  moves Unreleased under the new version.
+  or not. One line per entry saying what the user sees, never how it works, plus
+  the action a user must take when there is one. Its sections become the GitHub
+  Release notes. Not refactors, tests, CI, dev dependencies or docs. The release
+  commit moves Unreleased under the new version.
 - `docs/backlog.md`: everything not done (bugs, debt, ideas), one line each, with
   a `file:line` pointer where useful. Each item starts with a `B<n>` ID taken from
   the `Next ID:` line at the top (then incremented); IDs are never reused or
