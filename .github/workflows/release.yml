@@ -43,9 +43,9 @@ jobs:
           if-no-files-found: error
 
   # Trusted publishing: the package's publisher is set on npmjs.com to this repository and
-  # workflow, so no token is stored. It needs npm >= 11.5.1 and adds provenance by itself.
-  # Last before the Release, since a publish cannot be undone; skipped when the version is
-  # already on npm (the first one is published by hand, and a re-run must not fail).
+  # workflow, so no token is stored. It only stages the version (the publisher does not allow
+  # a direct `npm publish`): it goes live when a maintainer approves it with 2FA on npmjs.com
+  # (Staged Packages tab). Needs npm >= 11.15.0; provenance is automatic.
   publish:
     needs: [verify, widget]
     runs-on: ubuntu-latest
@@ -59,9 +59,9 @@ jobs:
           node-version: 22
           cache: npm
           registry-url: https://registry.npmjs.org
-      - run: npm install --global npm@^11.5.1
+      - run: npm install --global npm@^11.15.0
       - run: npm ci
-      - run: npm view "claude-analytics-dashboard@${GITHUB_REF_NAME#v}" version || npm publish
+      - run: npm stage publish
 
   # The exe is unsigned: Windows SmartScreen asks once before running it.
   release:

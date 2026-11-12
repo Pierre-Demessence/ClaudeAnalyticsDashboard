@@ -30,8 +30,8 @@ downloading one exe, with no Rust and no Traefik.
 - AC7 WHEN the widget runs and only the npm server is up, THE SYSTEM SHALL show its data
   and open `http://localhost:4747/` on click; with Traefik up, it keeps today's address.
   Check: `npm run widget:test` (fetch tests with a local listener).
-- AC8 WHEN a `v*` tag is pushed, CI SHALL test, publish the npm package with provenance
-  and create a GitHub Release with `cca-widget.exe` attached. Check: the first tag.
+- AC8 WHEN a `v*` tag is pushed, CI SHALL test, stage the npm package with provenance
+  (live once a maintainer approves it) and create a GitHub Release with `cca-widget.exe` attached. Check: the first tag.
 - AC9 The Docker dashboard runs the same server as the npm package, image without dev
   dependencies, unchanged URL, hook and widget. Check: `npm run docker:up`, manual.
 - AC10 The app is named "Claude Analytics Dashboard" everywhere a user reads it (header,
@@ -74,11 +74,11 @@ downloading one exe, with no Rust and no Traefik.
 - **Release**: `.github/workflows/release.yml` on `v*`, four jobs. `verify` (Ubuntu):
   `scripts/release-check.ts` (tag = `package.json` = `Cargo.toml` version; prints the
   version's CHANGELOG section as the notes), lint, test, build, `pack:check`. Then in
-  `widget` (Windows, `cargo test` and `cargo build --release`), then `publish` (`npm publish`
-  through trusted publishing: `id-token: write`, npm ≥ 11.5.1, provenance automatic; skipped
-  when the version is already on npm, as the hand-published first one is, so a re-run works).
-  `release` (needs both) runs `gh release create` with the exe and the notes, so a Release exists
-  only for a published version. The exe is unsigned: SmartScreen asks once.
+  `widget` (Windows, `cargo test` and `cargo build --release`), then `publish` (`npm stage publish`
+  through trusted publishing: `id-token: write`, npm ≥ 11.15.0, provenance automatic; the
+  publisher on npmjs.com allows staging only, so a compromised workflow cannot release alone:
+  the version goes live when a maintainer approves it with 2FA, in the Staged Packages tab).
+  `release` (needs both) runs `gh release create` with the exe and the notes. The exe is unsigned: SmartScreen asks once.
 - **Rename scope**: only what users read. Kept: the data dir `~/.claude-code-analytics`
   (users' history; moving it needs a migration for no visible gain), `CCA_*` variables,
   the `cca-theme` key, the widget's mutex and window class (old and new builds still
@@ -106,8 +106,9 @@ downloading one exe, with no Rust and no Traefik.
 - [x] B47.5 Widget finds either dashboard (AC7). Visible after: the widget works with the
   npm version. Needs you: nothing (covered by `widget:test`).
 - [x] B47.6 Release workflow (AC8). Visible after: nothing until a tag is pushed.
-  Needs you: publish 0.5.0 once by hand (`npm publish`), set the package's trusted
-  publisher on npmjs.com, push the tag (at the end).
+  Needs you: set the package's trusted publisher on npmjs.com (GitHub Actions,
+  `Pierre-Demessence/ClaudeAnalyticsDashboard`, `release.yml`, no environment, "Allow npm
+  publish" unticked), push the tag, approve the staged version on npmjs.com (at the end).
 - [ ] B47.8 Rename the app to "Claude Analytics Dashboard" (AC10): `brand.json`; `Header.tsx`
   reads the name from `brand.json` instead of hard-coding it; README, AGENTS and SECURITY
   titles; widget `Cargo.toml` description, window title, install folder
