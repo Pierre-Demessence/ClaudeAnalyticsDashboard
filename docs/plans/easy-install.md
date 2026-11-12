@@ -71,10 +71,14 @@ downloading one exe, with no Rust and no Traefik.
 - **Widget**: two candidates, Traefik (`127.0.0.1:80`, Host `analytics.claudecode.localhost`)
   then npm (`127.0.0.1:4747`, Host `localhost:4747`); the one that answered is tried
   first next time; the click opens its URL. Both live in `fetch.rs`.
-- **Release**: `.github/workflows/release.yml` on `v*`: Ubuntu job lint/test/build then
-  `npm publish` through trusted publishing (`id-token: write`, npm ≥ 11.5.1, provenance
-  automatic); Windows job `cargo build --release`, `gh release create` with the exe and
-  the version's CHANGELOG section. The exe is unsigned: SmartScreen asks once.
+- **Release**: `.github/workflows/release.yml` on `v*`, four jobs. `verify` (Ubuntu):
+  `scripts/release-check.ts` (tag = `package.json` = `Cargo.toml` version; prints the
+  version's CHANGELOG section as the notes), lint, test, build, `pack:check`. Then in
+  `widget` (Windows, `cargo test` and `cargo build --release`), then `publish` (`npm publish`
+  through trusted publishing: `id-token: write`, npm ≥ 11.5.1, provenance automatic; skipped
+  when the version is already on npm, as the hand-published first one is, so a re-run works).
+  `release` (needs both) runs `gh release create` with the exe and the notes, so a Release exists
+  only for a published version. The exe is unsigned: SmartScreen asks once.
 - **Rename scope**: only what users read. Kept: the data dir `~/.claude-code-analytics`
   (users' history; moving it needs a migration for no visible gain), `CCA_*` variables,
   the `cca-theme` key, the widget's mutex and window class (old and new builds still
@@ -101,7 +105,7 @@ downloading one exe, with no Rust and no Traefik.
   Needs you: `npm run docker:up`, then check the dashboard, a hook run and the widget (at the end).
 - [x] B47.5 Widget finds either dashboard (AC7). Visible after: the widget works with the
   npm version. Needs you: nothing (covered by `widget:test`).
-- [ ] B47.6 Release workflow (AC8). Visible after: nothing until a tag is pushed.
+- [x] B47.6 Release workflow (AC8). Visible after: nothing until a tag is pushed.
   Needs you: publish 0.5.0 once by hand (`npm publish`), set the package's trusted
   publisher on npmjs.com, push the tag (at the end).
 - [ ] B47.8 Rename the app to "Claude Analytics Dashboard" (AC10): `brand.json`; `Header.tsx`

@@ -1,0 +1,81 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  # Nothing is published unless the tag matches the versions and everything passes.
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node scripts/release-check.ts "$GITHUB_REF_NAME" > release-notes.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-notes
+          path: release-notes.md
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - run: npm run pack:check
+
+  widget:
+    needs: verify
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install stable --profile minimal
+      - run: cargo test --locked --manifest-path widget/Cargo.toml
+      - run: cargo build --release --locked --manifest-path widget/Cargo.toml
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cca-widget
+          path: widget/target/release/cca-widget.exe
+          if-no-files-found: error
+
+  # Trusted publishing: the package's publisher is set on npmjs.com to this repository and
+  # workflow, so no token is stored. It needs npm >= 11.5.1 and adds provenance by itself.
+  # Last before the Release, since a publish cannot be undone; skipped when the version is
+  # already on npm (the first one is published by hand, and a re-run must not fail).
+  publish:
+    needs: [verify, widget]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          registry-url: https://registry.npmjs.org
+      - run: npm install --global npm@^11.5.1
+      - run: npm ci
+      - run: npm view "claude-analytics-dashboard@${GITHUB_REF_NAME#v}" version || npm publish
+
+  # The exe is unsigned: Windows SmartScreen asks once before running it.
+  release:
+    needs: [publish, widget]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+      - run: >-
+          gh release create "$GITHUB_REF_NAME"
+          cca-widget/cca-widget.exe
+          --repo "$GITHUB_REPOSITORY"
+          --title "$GITHUB_REF_NAME"
+          --notes-file release-notes/release-notes.md
+        env:
+          GH_TOKEN: ${{ github.token }}

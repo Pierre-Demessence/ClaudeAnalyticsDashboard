@@ -10,7 +10,7 @@ export default defineConfig({
   test: {
     // Node-side tests opt out per file with `// @vitest-environment node`.
     environment: 'jsdom',
-    include: ['src/**/*.test.{ts,tsx}'],
+    include: ['src/**/*.test.{ts,tsx}', 'scripts/**/*.test.ts'],
     coverage: {
       exclude: ['src/**/*.test.{ts,tsx}', 'src/dashboard/main.tsx', 'src/collector/cli.ts', 'src/collector/backtest/cli.ts'],
       include: ['src/**/*.{ts,tsx}'],
