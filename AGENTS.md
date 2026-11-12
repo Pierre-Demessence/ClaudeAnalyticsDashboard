@@ -29,6 +29,9 @@ that setup isn't yours.
   forecasts on the data dir, read-only, and scores them against the final %
 - Hook: `npm run hook:install` prints it; `-- --apply` edits `~/.claude/settings.json`
 - Build: `npm run build` (type-checks both tsconfigs, then `vite build`)
+- Package: `npm run build:lib` emits `core`, `collector` and `server` to `lib/` (the
+  published package's code, git-ignored); `npm run pack:check` packs, installs the
+  tarball in a temp prefix and runs `setup`, a page fetch and `stop` against it
 - Lint: `npm run lint` / `npm run lint:fix`
 - Test: `npm test` / `npm run test:watch` / `npm run test:coverage`
 

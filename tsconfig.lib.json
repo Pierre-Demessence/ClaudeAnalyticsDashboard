@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.node.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "newLine": "lf",
+    "noEmit": false,
+    "outDir": "lib",
+    "rewriteRelativeImportExtensions": true
+  },
+  "include": ["src/core", "src/collector", "src/server"],
+  "exclude": ["src/**/*.test.ts", "src/collector/backtest"]
+}

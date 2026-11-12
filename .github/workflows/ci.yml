@@ -22,6 +22,7 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build
+      - run: npm run pack:check
 
   # The widget is Windows-only, and its golden images are rendered with Windows' fonts.
   widget:

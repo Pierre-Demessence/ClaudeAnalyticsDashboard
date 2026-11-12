@@ -1,14 +1,30 @@
 {
-  "name": "claudecodeanalytics",
+  "name": "claude-analytics-dashboard",
   "type": "module",
   "version": "0.4.0",
-  "private": true,
+  "description": "A local dashboard estimating Claude Code plan usage from your transcripts and the plan-limit endpoint.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Pierre-Demessence/ClaudeAnalyticsDashboard.git"
+  },
+  "bin": {
+    "claude-analytics-dashboard": "lib/server/cli.js"
+  },
+  "files": [
+    "dist/",
+    "lib/"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "engines": {
     "node": ">=22.18.0"
   },
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json && vite build",
+    "build:lib": "node -e \"fs.rmSync('lib',{recursive:true,force:true})\" && tsc -p tsconfig.lib.json",
     "preview": "vite preview",
     "dashboard": "vite build && vite preview --open",
     "docker:up": "docker compose up -d --build",
@@ -23,14 +39,9 @@
     "widget:dev": "cargo run --manifest-path widget/Cargo.toml",
     "widget:build": "cargo build --release --manifest-path widget/Cargo.toml",
     "widget:install": "pwsh -NoProfile -File widget/install.ps1",
-    "widget:test": "cargo test --manifest-path widget/Cargo.toml && cargo clippy --manifest-path widget/Cargo.toml --all-targets -- -D warnings"
-  },
-  "dependencies": {
-    "lucide-react": "^1.48.0",
-    "react": "^19.3.0",
-    "react-dom": "^19.3.0",
-    "react-is": "^19.3.0",
-    "recharts": "^3.10.1"
+    "widget:test": "cargo test --manifest-path widget/Cargo.toml && cargo clippy --manifest-path widget/Cargo.toml --all-targets -- -D warnings",
+    "pack:check": "node scripts/pack-check.ts",
+    "prepack": "npm run build && npm run build:lib"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^8.0.0",
@@ -48,6 +59,11 @@
     "eslint-plugin-react-refresh": "^0.5.7",
     "jiti": "^2.6.1",
     "jsdom": "^29.0.1",
+    "lucide-react": "^1.48.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "react-is": "^19.3.0",
+    "recharts": "^3.10.1",
     "typescript": "~5.9.3",
     "vite": "^8.3.5",
     "vitest": "^4.1.2"

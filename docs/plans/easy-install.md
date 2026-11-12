@@ -92,7 +92,7 @@ downloading one exe, with no Rust and no Traefik.
   replace-a-stale-server path wait until `/api/health` refuses connections before starting the new
   server (`/api/shutdown` closes the listener, not necessarily the process at once).
   Visible after: nothing: runs from the repo only. Needs you: nothing.
-- [ ] B47.3 Packaging (`tsconfig.lib.json`, `package.json`, `pack:check`, CI runs it).
+- [x] B47.3 Packaging (`tsconfig.lib.json`, `package.json`, `pack:check`, CI runs it).
   Visible after: `npm run pack:check` installs and serves the packed dashboard.
   Needs you: nothing.
 - [ ] B47.4 Docker runs `lib/server/cli.js start --host 0.0.0.0 --port 4173 --no-open`;
