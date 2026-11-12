@@ -22,8 +22,11 @@ function fail(message: string): never {
 }
 
 function run(command: string, args: string[], options: { cwd?: string; env?: NodeJS.ProcessEnv } = {}): string {
-  // npm and the installed shim are `.cmd` files on Windows, which only a shell starts.
-  const result = spawnSync(windows ? [command, ...args].map(part => `"${part}"`).join(' ') : command, windows ? [] : args, {
+  // npm and the installed shim are `.cmd` files on Windows, which only a shell starts. A bare
+  // command name stays unquoted: cmd resolves a quoted `"npm"` from the current directory, so
+  // npm.cmd (found through PATH) looks for its own files in the repository.
+  const shellCommand = [/^[\w.-]+$/.test(command) ? command : `"${command}"`, ...args.map(part => `"${part}"`)].join(' ');
+  const result = spawnSync(windows ? shellCommand : command, windows ? [] : args, {
     cwd: options.cwd,
     encoding: 'utf8',
     env: { ...process.env, ...options.env },
