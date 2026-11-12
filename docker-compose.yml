@@ -3,10 +3,12 @@ services:
     build: .
     image: claudecodeanalytics:latest
     restart: unless-stopped
+    # Node as PID 1 ignores SIGTERM, so `docker stop` would wait before killing it.
+    init: true
     # No published port: only Traefik (bound to 127.0.0.1:80) reaches the
-    # dashboard. Vite's default allowedHosts accepts `*.localhost`, which
-    # blocks DNS-rebinding requests with any other Host header. Its network is
-    # shared with Traefik alone, so other containers cannot call the API by IP.
+    # dashboard. The server only answers loopback Host headers (`*.localhost`
+    # included), which blocks DNS-rebinding requests with any other Host. Its
+    # network is shared with Traefik alone, so other containers cannot reach it.
     networks:
       - claudecodeanalytics
     labels:

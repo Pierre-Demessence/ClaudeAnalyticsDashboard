@@ -178,18 +178,20 @@ Run lint, test and build before considering work done.
   run it on the real data. With the Docker setup, the hook's runs pick it up once
   the container is rebuilt (`docker:up`).
 - The API is loopback-only: POST endpoints require `application/json` and a
-  same-origin `Origin`; reads rely on Vite's default `allowedHosts`. Never set
-  `server.host` or `allowedHosts: true` without adding a Host check. The Docker
-  container listens on `0.0.0.0` but publishes no port: from the host, only
-  Traefik (bound to `127.0.0.1:80`) reaches it, and `*.localhost` passes the
-  default `allowedHosts`. Its `claudecodeanalytics` network is shared with Traefik
-  alone: another container on it could call the API by IP (Vite always allows IP
-  hosts). Never publish a port or move it back to a shared network.
+  same-origin `Origin`, and `serve.ts` answers 403 to any `Host` that is not loopback
+  (`localhost`, `*.localhost`, `127.0.0.1`, `[::1]`) before any route. Never bind beyond
+  `127.0.0.1` outside Docker, and never loosen that check. The Docker container listens
+  on `0.0.0.0` but publishes no port: from the host, only Traefik (bound to
+  `127.0.0.1:80`) reaches it, with the `*.localhost` Host. Its
+  `claudecodeanalytics` network is shared with Traefik alone: another container on it
+  could still reach the API with `Host: localhost`. Never publish a port or move it back
+  to a shared network.
 - `GET /api/range` reads the stored data only: it never runs the collector or calls the
   endpoint, so any number of tabs can ask for ranges without touching the rate limit.
-- The container loads `vite.config.ts` with `--configLoader native` (its root
-  filesystem is read-only), so the config and everything it imports must run
-  under Node's type stripping, like the collector.
+- The container runs the same `lib/server/cli.js` as the npm package, from an image that
+  holds only `package.json`, `dist/` and `lib/` (no `node_modules`): `core`, `collector`
+  and `server` have no runtime import outside Node (`api.ts` imports Vite's types only),
+  so a runtime dependency there breaks the image.
 - The container serves the image it was built from; it mounts `~/.claude`
   read-only and the data dir read-write.
 - Keep the `@/*` alias in sync across `tsconfig.json`, `vite.config.ts` and

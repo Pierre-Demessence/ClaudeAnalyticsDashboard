@@ -95,7 +95,7 @@ downloading one exe, with no Rust and no Traefik.
 - [x] B47.3 Packaging (`tsconfig.lib.json`, `package.json`, `pack:check`, CI runs it).
   Visible after: `npm run pack:check` installs and serves the packed dashboard.
   Needs you: nothing.
-- [ ] B47.4 Docker runs `lib/server/cli.js start --host 0.0.0.0 --port 4173 --no-open`;
+- [x] B47.4 Docker runs `lib/server/cli.js start --host 0.0.0.0 --port 4173 --no-open`;
   Dockerfile without dev deps or `--configLoader native`; AGENTS invariants updated.
   Visible after: your always-on dashboard runs the new server, same URL.
   Needs you: `npm run docker:up`, then check the dashboard, a hook run and the widget (at the end).
