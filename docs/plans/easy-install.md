@@ -57,8 +57,9 @@ downloading one exe, with no Rust and no Traefik.
   `NPM_HOOK` = `curl -sf -m 120 -X POST … http://localhost:<port>/api/hook ||
   claude-analytics-dashboard start --background --no-open`. Claude Code runs hooks through a
   POSIX shell (Git Bash on Windows), so `||` and the npm `sh` shim work; verify on
-  Windows. `withCollectorHook` replaces any earlier hook of ours (command contains
-  `/api/hook` or `collector/cli.ts`). The fallback runs the globally installed release,
+  Windows. `withCollectorHook` replaces any earlier hook of ours (command calls
+  `/api/hook` on a `localhost` or `*.localhost` URL, or contains `collector/cli.ts`; another
+  tool's webhook to some `/api/hook` is kept). The fallback runs the globally installed release,
   never a working copy: the reason the Docker hook has no fallback does not apply.
 - **Packaging**: `tsconfig.lib.json` emits `core`, `collector`, `server` (no tests) to
   `lib/` with `rewriteRelativeImportExtensions` (Node refuses type stripping under
@@ -87,7 +88,7 @@ downloading one exe, with no Rust and no Traefik.
 
 - [x] B47.1 Production server and Host check (`serve.ts`, health, shutdown, tests).
   Visible after: nothing: not wired to anything yet. Needs you: nothing.
-- [ ] B47.2 CLI and hook variants (`server/cli.ts`, `hook.ts`, tests for AC3, AC4, AC6). `stop` and the
+- [x] B47.2 CLI and hook variants (`server/cli.ts`, `hook.ts`, tests for AC3, AC4, AC6). `stop` and the
   replace-a-stale-server path wait until `/api/health` refuses connections before starting the new
   server (`/api/shutdown` closes the listener, not necessarily the process at once).
   Visible after: nothing: runs from the repo only. Needs you: nothing.

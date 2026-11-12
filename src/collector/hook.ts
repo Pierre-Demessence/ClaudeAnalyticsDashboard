@@ -1,7 +1,7 @@
-import { copyFile, readFile, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-interface HookCommand {
+export interface HookCommand {
   async?: boolean;
   command: string;
   type: 'command';
@@ -17,52 +17,79 @@ interface ClaudeSettings {
   hooks?: Record<string, HookGroup[]>;
 }
 
+/** The command the npm package installs, also the name its fallback hook runs. */
+export const BIN_NAME = 'claude-analytics-dashboard';
+
+const POST_HOOK = 'curl -sf -m 120 -X POST -H "Content-Type: application/json" -d "{}"';
+
 /**
  * Asks the Docker dashboard for a collector run after every Claude Code response, in the
  * background. The host runs no code from this folder: checking out a branch here cannot
  * run it as the user. With the container down, the run is skipped; the next one catches up.
  */
-export const STOP_HOOK: HookCommand = {
+export const DOCKER_HOOK: HookCommand = {
   async: true,
-  command: 'curl -sf -m 120 -X POST -H "Content-Type: application/json" -d "{}" http://analytics.claudecode.localhost/api/hook',
+  command: `${POST_HOOK} http://analytics.claudecode.localhost/api/hook`,
   type: 'command',
 };
 
-/** The hook this tool used to install, which ran the working copy's collector on the host. */
-const isLocalCollector = (hook: HookCommand) => typeof hook.command === 'string' && hook.command.includes('collector/cli.ts');
-
-/** Adds the Stop hook, replacing one that runs the local collector. Returns null when unchanged. */
-export function withCollectorHook(settings: ClaudeSettings): ClaudeSettings | null {
-  const stop = settings.hooks?.Stop ?? [];
-  const installed = stop.some(group => group.hooks?.some(hook => hook.command === STOP_HOOK.command));
-  let replaced = false;
-  const kept = stop.flatMap((group) => {
-    if (!group.hooks?.some(isLocalCollector))
-      return [group];
-    replaced = true;
-    const hooks = group.hooks.filter(hook => !isLocalCollector(hook));
-    return hooks.length ? [{ ...group, hooks }] : [];
-  });
-  if (installed && !replaced)
-    return null;
-  return { ...settings, hooks: { ...settings.hooks, Stop: installed ? kept : [...kept, { hooks: [STOP_HOOK] }] } };
+/**
+ * Asks the npm package's server for a collector run and, when it does not answer, starts
+ * it in the background. The fallback runs the globally installed release, never a working
+ * copy. Claude Code runs hooks through a POSIX shell (Git Bash on Windows), so `||` works.
+ */
+export function npmHook(port: number): HookCommand {
+  return {
+    async: true,
+    command: `${POST_HOOK} http://localhost:${port}/api/hook || ${BIN_NAME} start --background --no-open --port ${port}`,
+    type: 'command',
+  };
 }
 
-/** Adds the hook to `<claudeDir>/settings.json`, after a backup. Returns a message for the user. */
-export async function installHook(claudeDir: string): Promise<string> {
+/** Today's hooks call `/api/hook` on a loopback name; the old one ran the local collector. */
+const OUR_HOOK = /https?:\/\/(?:[\w-]+\.)*localhost(?::\d+)?\/api\/hook|collector\/cli\.ts/;
+
+/** A hook installed by this tool; another tool's webhook to some `/api/hook` is left alone. */
+const isOurs = (hook: HookCommand) => typeof hook.command === 'string' && OUR_HOOK.test(hook.command);
+
+/** Adds the Stop hook, replacing any earlier hook of ours. Returns null when unchanged. */
+export function withCollectorHook(settings: ClaudeSettings, hook: HookCommand): ClaudeSettings | null {
+  const stop = settings.hooks?.Stop ?? [];
+  const ours = stop.flatMap(group => (group.hooks ?? []).filter(isOurs));
+  if (ours.length === 1 && ours[0]!.command === hook.command)
+    return null;
+  const kept = stop.flatMap((group) => {
+    if (!group.hooks?.some(isOurs))
+      return [group];
+    const hooks = group.hooks.filter(other => !isOurs(other));
+    return hooks.length ? [{ ...group, hooks }] : [];
+  });
+  return { ...settings, hooks: { ...settings.hooks, Stop: [...kept, { hooks: [hook] }] } };
+}
+
+/**
+ * Adds the hook to `<claudeDir>/settings.json`, after a backup; creates the file when
+ * Claude Code has not written one yet. Returns a message for the user.
+ */
+export async function installHook(claudeDir: string, hook: HookCommand): Promise<string> {
   const path = join(claudeDir, 'settings.json');
-  let text: string;
+  let text: string | undefined;
   try {
     text = await readFile(path, 'utf8');
   }
-  catch {
-    return `Could not read ${path}; add the hook by hand (run without --apply to print it).`;
+  catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT')
+      return `Could not read ${path}; add the hook by hand (run without --apply to print it).`;
   }
-  const updated = withCollectorHook(JSON.parse(text) as ClaudeSettings);
+  const updated = withCollectorHook(text === undefined ? {} : JSON.parse(text) as ClaudeSettings, hook);
   if (!updated)
     return `The collector hook is already in ${path}.`;
-  const backup = `${path}.bak-${Date.now()}`;
-  await copyFile(path, backup);
+  let backup = '';
+  if (text !== undefined) {
+    backup = `${path}.bak-${Date.now()}`;
+    await copyFile(path, backup);
+  }
+  await mkdir(claudeDir, { recursive: true });
   await writeFile(path, `${JSON.stringify(updated, null, 2)}\n`);
-  return `Installed the Stop hook in ${path} (backup: ${backup}). It needs the Docker dashboard running (\`npm run docker:up\`).`;
+  return backup ? `Installed the Stop hook in ${path} (backup: ${backup}).` : `Installed the Stop hook in ${path}.`;
 }

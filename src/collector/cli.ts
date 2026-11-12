@@ -1,18 +1,19 @@
 import process from 'node:process';
 
 import { collect } from './collect.ts';
-import { installHook, STOP_HOOK } from './hook.ts';
+import { DOCKER_HOOK, installHook } from './hook.ts';
 import { claudeDir, dataDir } from './store.ts';
 
 const args = new Set(process.argv.slice(2));
 
 if (args.has('install-hook')) {
   if (args.has('--apply')) {
-    console.log(await installHook(claudeDir()));
+    console.log(await installHook(claudeDir(), DOCKER_HOOK));
+    console.log('The hook needs the Docker dashboard running (`npm run docker:up`).');
   }
   else {
     console.log('Add this to ~/.claude/settings.json (or run `npm run hook:install -- --apply`):\n');
-    console.log(JSON.stringify({ hooks: { Stop: [{ hooks: [STOP_HOOK] }] } }, null, 2));
+    console.log(JSON.stringify({ hooks: { Stop: [{ hooks: [DOCKER_HOOK] }] } }, null, 2));
   }
 }
 else {
