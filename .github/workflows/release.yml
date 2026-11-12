@@ -107,7 +107,16 @@ jobs:
     permissions:
       contents: write
     steps:
+      # By name: with no name every artifact is downloaded, including the `.dockerbuild`
+      # record the image job's build step uploads, which fails to extract.
       - uses: actions/download-artifact@v4
+        with:
+          name: cca-widget
+          path: cca-widget
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-notes
+          path: release-notes
       - run: >-
           gh release create "$GITHUB_REF_NAME"
           cca-widget/cca-widget.exe
