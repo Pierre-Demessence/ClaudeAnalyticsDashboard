@@ -6,7 +6,7 @@ Order of the milestones. A milestone that needs design gets its own plan in
 
 ## Next
 
-- **B48 Docker image on GitHub's container registry** (`docs/plans/docker-image.md`).
+Nothing scheduled.
 
 ## Waiting for data
 

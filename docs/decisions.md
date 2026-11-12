@@ -45,10 +45,15 @@ Friends who install the npm package get a second hook: the same POST to
 `localhost:4747/api/hook`, then `claude-analytics-dashboard start --background` when
 it fails, which is how the server is up whenever Claude Code is used. The reason
 the Docker hook has no fallback does not apply: the fallback runs the globally
-installed release, never a working copy. Rejected for friends: Docker (heavy, and
-the hook and widget would need the same address work); starting the server at OS
+installed release, never a working copy. Rejected for friends: starting the server at OS
 login (different on each OS, and a console window on Windows); a standalone exe
 bundling Node (friends have Node).
+
+Docker is the second install, for friends without Node: the published image on port 4747
+(see "Always-on dashboard"), with no hook. The server already imports every minute, and a
+hook would mean hand-editing `settings.json`, which the container mounts read-only. The
+npm package is still the default: it needs no Docker Desktop and its hook keeps the data
+fresh after every response.
 
 ## API-equivalent cost as the usage unit
 
@@ -198,6 +203,14 @@ dependencies, and no `--configLoader native` workaround for its read-only root
 filesystem. Updates go live only on `npm run docker:up`: mounting the working copy
 and rebuilding at start was rejected because a half-finished edit would go live at
 the next boot. The Claude Code hook asks the container for collector runs.
+
+The same image is published on GHCR at each release, for `docker/compose.yaml` (port
+`127.0.0.1:4747`, the npm package's, so the widget and the URL stay the same). The
+Traefik setup keeps building locally: it serves the working copy a contributor is
+developing (the hook reaches only that image, see Invariants), not a release. The users' file lives in `docker/`, not at the root, since a
+root `compose.yaml` wins over `docker-compose.yml` and would hijack `docker:up`. The
+image job runs after the npm version is staged, so a release that fails a check
+publishes no image; the image, unlike the npm version, goes live without the 2FA wait.
 
 ## Tabs as hash links, no router
 

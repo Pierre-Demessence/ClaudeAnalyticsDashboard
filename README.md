@@ -67,7 +67,8 @@ Also: **Weeks** (the last 12 weekly windows, day by day) and **Calibration**
 
 ## Install
 
-Requires Node ≥ 22.18, on Windows, macOS or Linux.
+Requires Node ≥ 22.18, on Windows, macOS or Linux. Without Node, use the
+[Docker image](#always-on-dashboard-docker) instead.
 
 ```sh
 npm install -g claude-analytics-dashboard
@@ -165,7 +166,7 @@ Docked left of the notification area: both limits as a bar, a percent and the
 time to reset. Click it to open the dashboard; right-click for "Start with
 Windows" and "Quit". A small native process (about 10 MB). It shows the data of
 the dashboard that answers: the npm one on port 4747, which the hook starts
-whenever Claude Code is used, or the [Docker one](#always-on-dashboard-docker-from-a-clone).
+whenever Claude Code is used, or the [Docker one](#always-on-dashboard-docker).
 
 Download `cca-widget.exe` from the
 [latest release](https://github.com/Pierre-Demessence/ClaudeAnalyticsDashboard/releases/latest)
@@ -180,9 +181,37 @@ tools), copies it to `%LOCALAPPDATA%\Claude Analytics Dashboard Widget` and star
 Only one widget runs at a time: quit the installed one before `widget:dev` or a
 new `widget:install`.
 
+### Always-on dashboard (Docker)
+
+The install for someone without Node: only Docker (Docker Desktop on Windows and
+macOS). Each release publishes an image for `linux/amd64` and `linux/arm64`.
+
+```sh
+mkdir claude-analytics-dashboard && cd claude-analytics-dashboard
+curl -fsSLO https://raw.githubusercontent.com/Pierre-Demessence/ClaudeAnalyticsDashboard/main/docker/compose.yaml
+docker compose up -d
+```
+
+In PowerShell, write `curl.exe` (plain `curl` is another command there). The dashboard
+answers at <http://localhost:4747>, shows your history within a minute and restarts with
+Docker. The container imports your transcripts every minute while it runs, so no hook is
+needed; adding one would mean editing `~/.claude/settings.json` by hand, since the
+container only reads `~/.claude`. Limit readings work as in [Install](#install).
+
+- **Update:** `docker compose pull`, then `docker compose up -d`. Your data is kept.
+- **Uninstall:** `docker compose down`; your history stays in `~/.claude-code-analytics/`
+  until you delete that folder.
+- **Linux:** create `~/.claude-code-analytics` before the first `up`, or Docker creates it
+  as root and the container cannot write to it. The container runs as user id 1000: if
+  yours differs, add `user: "<your uid>:<your gid>"` under `dashboard` in the compose file.
+- **Port 4747** is also the npm package's: run one of them. The taskbar widget and the
+  hook find either.
+- The compose file publishes the port on `127.0.0.1` only and mounts `~/.claude` read-only.
+  The container can read your login token when the usage endpoint is on: see [Privacy](#privacy).
+
 ### Always-on dashboard (Docker, from a clone)
 
-An alternative to the npm install for contributors: `npm run docker:up` builds the image and serves the dashboard at
+An alternative for contributors, built from the working copy: `npm run docker:up` builds the image and serves the dashboard at
 <http://analytics.claudecode.localhost>. Needs Docker Desktop and a running
 Traefik reverse proxy joined to an external `claudecodeanalytics` network, which
 no other container joins, so no other container can call the dashboard's API.
@@ -212,6 +241,7 @@ every minute.
 | `npm run collect` | Run the collector once (`-- --force` skips the endpoint throttle). |
 | `npm run backtest` | Replay the forecasts on your data and score them. |
 | `npm run docker:up` | Build and (re)start the always-on Docker dashboard. |
+| `npm run image:check` | Build the Docker image and run it from `docker/compose.yaml` on temp dirs. |
 | `npm run widget:dev` | Run the taskbar widget from the source; redraws when `widget/widget.svg` is saved. |
 | `npm run widget:install` | Build the taskbar widget and install it for the user. |
 | `npm run widget:test` | Test and lint the widget (`cargo test`, `clippy`). |

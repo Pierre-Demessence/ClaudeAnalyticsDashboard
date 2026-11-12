@@ -6,6 +6,14 @@ Noteworthy changes for users. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Install with Docker alone, no Node: each release publishes an image on GitHub's
+  container registry. Download `docker/compose.yaml`, run `docker compose up -d`, and
+  the dashboard answers at `http://localhost:4747` (where the taskbar widget already
+  looks), importing your transcripts every minute with no hook. Update with
+  `docker compose pull`.
+
 ## [0.5.0]
 
 ### Added

@@ -19,6 +19,9 @@ that setup isn't yours.
   at `http://analytics.claudecode.localhost`, behind Traefik). Needs a running
   Traefik joined to an external `claudecodeanalytics` network; skip it if you
   don't have one.
+- Published image check: `npm run image:check` builds the image and runs it from
+  `docker/compose.yaml` with an override (temp Claude and data dirs, a free loopback
+  port); needs Docker running. CI and the release's `verify` job run it
 - Taskbar widget: `npm run widget:dev` (debug build, redraws when
   `widget/widget.svg` is saved) / `npm run widget:install` (release build copied
   to `%LOCALAPPDATA%\Claude Analytics Dashboard Widget` and started) /
@@ -66,8 +69,12 @@ Run lint, test and build before considering work done.
 - `docs/` — `backlog.md`, `decisions.md`, `roadmap.md`, `plans/` (see "Docs"); `screenshots/` holds the README's
   images: each tab in light and dark, anonymize mode on, 1280 px wide at 2× scale, cut
   below the last whole card.
-- `Dockerfile`, `docker-compose.yml` — the always-on dashboard behind Traefik.
-- `scripts/` — `pack-check.ts` (the packed package, run like a friend would) and
+- `Dockerfile` — the one image, for both setups. `docker-compose.yml` — the
+  always-on dashboard behind Traefik, built from the working copy. `docker/compose.yaml`
+  — the users' file: the image published on GHCR, one loopback port, no Traefik (not a
+  root `compose.yaml`, which would win over `docker-compose.yml` for `docker:up`).
+- `scripts/` — `pack-check.ts` (the packed package, run like a friend would),
+  `image-check.ts` (the image, run from `docker/compose.yaml`) and
   `release-check.ts` (the release workflow's version and CHANGELOG check);
   `.github/workflows/` — `ci.yml` and `release.yml`.
 
@@ -178,8 +185,12 @@ Run lint, test and build before considering work done.
   `widget/Cargo.toml` and the CHANGELOG, runs lint, tests, build and `pack:check`,
   builds the widget, then *stages* the npm version through trusted publishing (no
   token; the publisher on npmjs.com allows `npm stage publish` only, so a maintainer
-  approves the version with 2FA there) and creates the GitHub Release with
-  `cca-widget.exe` and the version's CHANGELOG section. The package must keep an empty
+  approves the version with 2FA there), pushes the image
+  `ghcr.io/pierre-demessence/claude-analytics-dashboard` (`X.Y.Z`, `X.Y`, `latest`;
+  `linux/amd64` and `linux/arm64`) only after that staging, so a failed check publishes
+  no image, and creates the GitHub Release with
+  `cca-widget.exe` and the version's CHANGELOG section. The image goes live at once,
+  without the 2FA wait. The package must keep an empty
   `dependencies`: the dashboard and its libraries are bundled into `dist/`.
 - The data dir (`~/.claude-code-analytics/`, or `CCA_DATA_DIR`) holds the
   user's history: never wipe it. Tests and manual runs use a temp
@@ -204,11 +215,14 @@ Run lint, test and build before considering work done.
   same-origin `Origin`, and `serve.ts` answers 403 to any `Host` that is not loopback
   (`localhost`, `*.localhost`, `127.0.0.1`, `[::1]`) before any route. Never bind beyond
   `127.0.0.1` outside Docker, and never loosen that check. The Docker container listens
-  on `0.0.0.0` but publishes no port: from the host, only Traefik (bound to
-  `127.0.0.1:80`) reaches it, with the `*.localhost` Host. Its
-  `claudecodeanalytics` network is shared with Traefik alone: another container on it
-  could still reach the API with `Host: localhost`. Never publish a port or move it back
-  to a shared network.
+  on `0.0.0.0`. In the Traefik setup (`docker-compose.yml`) it publishes no port: from
+  the host, only Traefik (bound to `127.0.0.1:80`) reaches it, with the `*.localhost`
+  Host. Its `claudecodeanalytics` network is shared with Traefik alone: another
+  container on it could still reach the API with `Host: localhost`. Never publish a port
+  or move it back to a shared network. The users' file (`docker/compose.yaml`) publishes
+  only `127.0.0.1:4747` → 4173 on the project's own network, with the same Host check
+  behind it: never publish on another address, and keep the hardening (`read_only`,
+  `cap_drop: ALL`, `no-new-privileges`, `~/.claude` read-only), which `image:check` asserts.
 - `GET /api/range` reads the stored data only: it never runs the collector or calls the
   endpoint, so any number of tabs can ask for ranges without touching the rate limit.
 - The container runs the same `lib/server/cli.js` as the npm package, from an image that
