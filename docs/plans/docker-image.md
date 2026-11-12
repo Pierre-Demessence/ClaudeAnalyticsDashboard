@@ -79,13 +79,15 @@ flowchart LR
 
 ## Checklist
 
+Status: B48.1 done; next is B48.2.
+
 ### B48.1 Image check and user compose file
 
-- [ ] `Dockerfile`: `--platform=$BUILDPLATFORM` on the build stage.
-- [ ] `docker/compose.yaml` as in Design.
-- [ ] `scripts/image-check.ts` and the `image:check` npm script covering AC1–AC3.
-- [ ] `ci.yml`: `npm run image:check` in the `build` job, after `pack:check`.
-- [ ] Verify: `npm run image:check` passes locally; lint, tests, build pass.
+- [x] `Dockerfile`: `--platform=$BUILDPLATFORM` on the build stage.
+- [x] `docker/compose.yaml` as in Design.
+- [x] `scripts/image-check.ts` and the `image:check` npm script covering AC1–AC3.
+- [x] `ci.yml`: `npm run image:check` in the `build` job, after `pack:check`.
+- [x] Verify: `npm run image:check` passes locally; lint, tests, build pass.
 
 Visible after: nothing: the image is only built locally and in CI.
 Needs you: nothing.

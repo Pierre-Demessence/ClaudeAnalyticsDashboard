@@ -41,6 +41,7 @@
     "widget:install": "pwsh -NoProfile -File widget/install.ps1",
     "widget:test": "cargo test --manifest-path widget/Cargo.toml && cargo clippy --manifest-path widget/Cargo.toml --all-targets -- -D warnings",
     "pack:check": "node scripts/pack-check.ts",
+    "image:check": "node scripts/image-check.ts",
     "prepack": "npm run build && npm run build:lib"
   },
   "devDependencies": {

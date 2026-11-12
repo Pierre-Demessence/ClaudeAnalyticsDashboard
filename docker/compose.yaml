@@ -1,0 +1,29 @@
+# Always-on Claude Analytics Dashboard from the published image, no Node needed.
+#   docker compose up -d       start it, then open http://localhost:4747
+#   docker compose pull        fetch a newer version (then `up -d` again)
+#   docker compose down        stop and remove it (your history stays on disk)
+name: claude-analytics-dashboard
+
+services:
+  dashboard:
+    image: ghcr.io/pierre-demessence/claude-analytics-dashboard:latest
+    restart: unless-stopped
+    # Node as PID 1 ignores SIGTERM, so `docker stop` would wait before killing it.
+    init: true
+    # Loopback only, on the npm package's port: the taskbar widget and the dashboard's URL
+    # stay the same. The server also answers only loopback Host headers, which blocks
+    # DNS-rebinding requests from a web page.
+    ports:
+      - 127.0.0.1:4747:4173
+    volumes:
+      # Transcripts and the OAuth token: read-only, the token is only read.
+      - ~/.claude:/claude:ro
+      # Your history. On Linux, create it first or Docker creates it as root.
+      - ~/.claude-code-analytics:/data
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true

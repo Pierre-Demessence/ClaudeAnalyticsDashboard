@@ -1,7 +1,9 @@
 # Always-on dashboard: the same server as the npm package (`lib/server/cli.js`),
 # which serves the built app and the `/api` routes, reads the transcripts and
 # writes the data dir (both mounted).
-FROM node:24-alpine AS build
+# `dist/` and `lib/` do not depend on the platform and the final stage has no `RUN`, so a
+# multi-arch build compiles once, natively, and needs no emulation.
+FROM --platform=$BUILDPLATFORM node:24-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
