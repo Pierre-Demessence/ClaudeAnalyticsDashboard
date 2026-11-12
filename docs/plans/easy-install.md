@@ -85,9 +85,11 @@ downloading one exe, with no Rust and no Traefik.
 
 ## Checklist
 
-- [ ] B47.1 Production server and Host check (`serve.ts`, health, shutdown, tests).
+- [x] B47.1 Production server and Host check (`serve.ts`, health, shutdown, tests).
   Visible after: nothing: not wired to anything yet. Needs you: nothing.
-- [ ] B47.2 CLI and hook variants (`server/cli.ts`, `hook.ts`, tests for AC3, AC4, AC6).
+- [ ] B47.2 CLI and hook variants (`server/cli.ts`, `hook.ts`, tests for AC3, AC4, AC6). `stop` and the
+  replace-a-stale-server path wait until `/api/health` refuses connections before starting the new
+  server (`/api/shutdown` closes the listener, not necessarily the process at once).
   Visible after: nothing: runs from the repo only. Needs you: nothing.
 - [ ] B47.3 Packaging (`tsconfig.lib.json`, `package.json`, `pack:check`, CI runs it).
   Visible after: `npm run pack:check` installs and serves the packed dashboard.
@@ -106,7 +108,11 @@ downloading one exe, with no Rust and no Traefik.
   titles; widget `Cargo.toml` description, window title, install folder
   `%LOCALAPPDATA%\Claude Analytics Dashboard Widget` and Run value name;
   `install.ps1` deletes the old Run value and the old install folder after a successful
-  copy; CHANGELOG. Golden images unchanged (no name in `widget.svg`).
+  copy; CHANGELOG. The GitHub repository is already renamed to `ClaudeAnalyticsDashboard`:
+  every `Pierre-Demessence/ClaudeCodeAnalytics` link becomes
+  `Pierre-Demessence/ClaudeAnalyticsDashboard` (issue templates, pull request template,
+  SECURITY, README clone path, CHANGELOG compare links), and `package.json`'s
+  `repository` (B47.3) uses the new name. Golden images unchanged (no name in `widget.svg`).
   Visible after: the new name in the header, the browser tab and the widget's menu.
   Needs you: quit the widget, `npm run widget:install`, check it starts with Windows
   once (at the end).

@@ -25,7 +25,7 @@ const MAX_THROTTLE_MINUTES = 1440;
 /** As often as the taskbar widget polls; the endpoint keeps its own throttle. */
 const COLLECT_EVERY_MS = 60_000;
 
-class HttpError extends Error {
+export class HttpError extends Error {
   readonly status: number;
 
   constructor(status: number, message: string) {
@@ -34,7 +34,7 @@ class HttpError extends Error {
   }
 }
 
-function send(res: ServerResponse, status: number, body: unknown) {
+export function send(res: ServerResponse, status: number, body: unknown) {
   res.statusCode = status;
   res.setHeader('Content-Type', 'application/json');
   res.setHeader('Cache-Control', 'no-store');
@@ -46,7 +46,7 @@ function send(res: ServerResponse, status: number, body: unknown) {
  * localhost, but cannot send `application/json` cross-origin without a
  * preflight, and its Origin would not match the Host.
  */
-function assertSameOriginJson(req: IncomingMessage) {
+export function assertSameOriginJson(req: IncomingMessage) {
   if (!req.headers['content-type']?.startsWith('application/json'))
     throw new HttpError(415, 'Expected application/json');
   const origin = req.headers.origin;
@@ -285,7 +285,7 @@ export function createApiMiddleware({ lockWaitMs = LOCK_WAIT_MS } = {}) {
   };
 }
 
-function onError(res: ServerResponse, error: unknown) {
+export function onError(res: ServerResponse, error: unknown) {
   if (error instanceof HttpError) {
     send(res, error.status, { error: error.message });
   }
@@ -300,7 +300,7 @@ function onError(res: ServerResponse, error: unknown) {
  * Runs the collector on a timer while the server is up, so readings continue with
  * no tab or widget open. Each run is throttled and skipped while another holds the lock.
  */
-function collectWhileOpen(httpServer: Server | null) {
+export function collectWhileOpen(httpServer: Server | null) {
   if (!httpServer)
     return;
   const timer = setInterval(() => void collect({ claudeDir: claudeDir(), dataDir: dataDir() }).catch(() => {}), COLLECT_EVERY_MS);
