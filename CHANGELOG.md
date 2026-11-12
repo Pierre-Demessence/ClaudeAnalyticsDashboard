@@ -6,6 +6,15 @@ Noteworthy changes for users. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Install without cloning: `npm install -g claude-analytics-dashboard`, then
+  `claude-analytics-dashboard setup` adds the Claude Code hook and starts the
+  dashboard at `http://localhost:4747`, on Windows, macOS or Linux. The hook starts
+  it again whenever it is not running, so it is up whenever you use Claude Code.
+- The taskbar widget is a download (`cca-widget.exe` on the release page: no Rust,
+  no Docker). It shows the data of the npm dashboard or of the Docker one.
+
 ### Changed
 
 - The app is called "Claude Analytics Dashboard" (header, browser tab, taskbar

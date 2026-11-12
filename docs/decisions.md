@@ -41,6 +41,15 @@ two mounts. Rejected: running the local collector when the container is down
 (brings the risk back); a copy of the collector installed outside the clone
 (still runs with the user's full access).
 
+Friends who install the npm package get a second hook: the same POST to
+`localhost:4747/api/hook`, then `claude-analytics-dashboard start --background` when
+it fails, which is how the server is up whenever Claude Code is used. The reason
+the Docker hook has no fallback does not apply: the fallback runs the globally
+installed release, never a working copy. Rejected for friends: Docker (heavy, and
+the hook and widget would need the same address work); starting the server at OS
+login (different on each OS, and a console window on Windows); a standalone exe
+bundling Node (friends have Node).
+
 ## API-equivalent cost as the usage unit
 
 Plan limits drain faster on Opus than Sonnet, and cache reads cost far less than
@@ -63,12 +72,16 @@ until the plan has its own. Rejected: waiting, which leaves no projection for up
 day after an upgrade; converting with the measured multipliers, which needs 3
 completed weeks on both plans.
 
-## Server-side summary in a Vite plugin
+## Server-side summary behind `/api/*`, one server for dev, package and container
 
 The browser cannot read `~/.claude`, and a year of message records is around
-100 MB, so the dev/preview server computes the summary and serves `/api/*`.
-Rejected: a separate Node server (one more process and port); shipping raw
-records to the browser.
+100 MB, so a Node server computes the summary and serves `/api/*`. The routes are a
+Vite plugin (`api.ts`) so `npm run dev` has them; `serve.ts`, a plain `node:http`
+server, mounts the same middleware and serves the built `dist/`, so the npm package
+and the Docker image run without Vite. It owns the loopback `Host` check that Vite's
+`allowedHosts` did. Rejected: shipping raw records to the browser; `vite preview` in
+the package (Vite is a dev dependency, and the package has no runtime dependency to
+download); a second server implementation (two sets of routes to keep equal).
 
 ## Monthly message files
 
@@ -79,10 +92,12 @@ would be overkill for append-mostly data.
 
 ## Local API trust model
 
-The `/api/*` routes run inside the Vite dev/preview server, which binds to
-localhost. Writes require `application/json` and an `Origin` matching `Host`,
-which blocks cross-site form posts. Reads rely on Vite's default `allowedHosts`
-and CORS rules. No auth: anyone with local access can already read `~/.claude`.
+The `/api/*` routes run in a server bound to loopback (`serve.ts` in the package and
+the container, Vite in `npm run dev`). Writes require `application/json` and an
+`Origin` matching `Host`, which blocks cross-site form posts. Reads rely on a `Host`
+allow-list (loopback names only: `serve.ts` answers 403 to any other, Vite's
+`allowedHosts` does the same in dev), which blocks DNS rebinding, and on CORS rules.
+No auth: anyone with local access can already read `~/.claude`.
 
 ## One data-dir lock for every writer
 
@@ -175,15 +190,14 @@ The collector adds a plan period when Claude Code's login reports a different
 plan, unless the active period was set by hand; the dashboard then shows the
 mismatch with a one-click switch instead of overriding the user.
 
-## Always-on dashboard: a rebuilt Docker image running `vite preview`
+## Always-on dashboard: a rebuilt Docker image running the package's server
 
-The container runs `vite preview` (the `/api` routes are a Vite plugin), so the
-image keeps dev dependencies; writing a separate production server was not worth
-it for a local tool. Updates go live only on `npm run docker:up`: mounting the
-working copy and rebuilding at start was rejected because a half-finished edit
-would go live at the next boot. The root filesystem is read-only, hence
-`--configLoader native` (the default loader bundles the config into
-`node_modules`). The Claude Code hook asks the container for collector runs.
+The container runs `lib/server/cli.js start --host 0.0.0.0`, the npm package's
+entry, from an image holding only `package.json`, `dist/` and `lib/`: no dev
+dependencies, and no `--configLoader native` workaround for its read-only root
+filesystem. Updates go live only on `npm run docker:up`: mounting the working copy
+and rebuilding at start was rejected because a half-finished edit would go live at
+the next boot. The Claude Code hook asks the container for collector runs.
 
 ## Tabs as hash links, no router
 
@@ -604,3 +618,11 @@ The ids are stored in `settings.json` plan histories, snapshots and backups, and
 Max and Ultra are the labels of the plans advertised as Max 5× and Max 20×, at
 the same prices. Only `PLAN_LABELS` carries them. Rejected: renaming the ids to `max` and `ultra`, which needs
 a migration of the stored data for no visible change.
+
+## The rename keeps internal names
+
+The app is "Claude Analytics Dashboard" wherever a user reads it. Kept as they were:
+the data dir `~/.claude-code-analytics` (it holds users' history, and moving it
+needs a migration for no visible gain), the `CCA_*` variables, the `cca-theme` key,
+the widget's mutex and window class (an old and a new build still exclude each
+other), the Docker network and `analytics.claudecode.localhost`.

@@ -17,8 +17,8 @@ page says how to make a pull request easy to merge.
 ## Setup
 
 Requires Node ≥ 22.18. The taskbar widget also needs Windows, Rust
-(`mise install`) and the Docker dashboard running behind Traefik, which it polls;
-its tests run without them.
+(`mise install`) and a running dashboard to poll (the Docker one behind Traefik, or
+the npm package's on port 4747); its tests run without them.
 
 ```sh
 npm install
@@ -78,7 +78,9 @@ git keeps the history. The full rules are in the "Docs" section of `AGENTS.md`.
    ```
 
    If you touched `widget/`, also run `npm run widget:test` on Windows; CI runs
-   it too.
+   it too. If you touched `src/server/`, `src/collector/hook.ts`, `package.json` or
+   the build, also run `npm run pack:check`, which installs the packed package in a
+   temp folder and runs it; CI runs it too.
 2. Keep one topic per pull request. Commit messages follow
    [Conventional Commits](https://www.conventionalcommits.org/)
    (`fix(dashboard): …`, `feat(collector): …`).

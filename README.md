@@ -65,25 +65,37 @@ limits, and shows where the usage goes. Nothing leaves your machine.
 Also: **Weeks** (the last 12 weekly windows, day by day) and **Calibration**
 (limit readings, settings and how well the forecasts fit them).
 
-## Getting started
+## Install
 
-Requires Node ≥ 22.18.
+Requires Node ≥ 22.18, on Windows, macOS or Linux.
 
 ```sh
-git clone https://github.com/Pierre-Demessence/ClaudeAnalyticsDashboard.git
-cd ClaudeAnalyticsDashboard
-npm install
-npm run hook:install -- --apply # adds the collector hook to ~/.claude/settings.json (with a backup); it calls the always-on dashboard
-npm run dashboard               # builds and opens the dashboard
+npm install -g claude-analytics-dashboard
+claude-analytics-dashboard setup
 ```
 
-Run `npm run hook:install` without `--apply` to print the hook and add it yourself.
-After every Claude Code response, the hook asks the
-[always-on dashboard](#always-on-dashboard-docker) to import new transcripts, in
-the background; without it, any running dashboard imports them every minute. The hook
-runs no code from this folder, so a branch checked out here never runs on its own.
-Neither uses any of your usage: they read files Claude Code already writes and
-never call Claude, and the hook adds nothing to your conversation.
+`setup` adds a Stop hook to `~/.claude/settings.json` (with a backup), starts the
+dashboard in the background and opens it at <http://localhost:4747> (`CCA_PORT`
+changes the port). After every Claude Code response, the hook asks the dashboard to
+import new transcripts, in the background; if the dashboard is not running, the hook
+starts it, with no window. So the dashboard is up whenever you use Claude Code, and
+you never start it by hand. Neither uses any of your usage: they read files Claude
+Code already writes and never call Claude, and the hook adds nothing to your
+conversation.
+
+Other commands: `claude-analytics-dashboard` runs the dashboard in the terminal and
+opens it (Ctrl+C stops it), `claude-analytics-dashboard stop` stops a running one
+(the hook starts it again after the next Claude Code response), and `install-hook`
+prints the hook instead of adding it (`--apply` adds it).
+
+**Update.** `npm install -g claude-analytics-dashboard@latest`, then run
+`claude-analytics-dashboard start --background --no-open`: it replaces a running
+older dashboard with the new one. Your data is kept.
+
+**Uninstall.** Delete the Stop hook that posts to `localhost:4747/api/hook` from
+`~/.claude/settings.json` (otherwise it restarts the dashboard), run
+`claude-analytics-dashboard stop`, then `npm uninstall -g claude-analytics-dashboard`. Your history stays in
+`~/.claude-code-analytics/` until you delete that folder.
 
 **Limit readings.** The % of your limits comes from one of two sources, set in
 the Calibration tab:
@@ -111,7 +123,7 @@ once you turn it on.
 | `~/.claude/projects/**/*.meta.json` | A subagent's type, never its description. | Every collector run |
 | `~/.claude.json` (or `~/.claude/.claude.json`) | `subscriptionCreatedAt` only (the billing day, unless the plan history sets it), never the email or account ids. | Every collector run |
 | `~/.claude/.credentials.json` | The OAuth access token, its expiry, the plan type and rate-limit tier. | Only with the usage endpoint on |
-| `~/.claude/settings.json` | Read and edited, with a backup, to add the hook. | Only when you run `hook:install -- --apply` |
+| `~/.claude/settings.json` | Read and edited, with a backup, to add the hook. | Only when you run `setup` or `install-hook --apply` (`hook:install -- --apply` from a clone) |
 
 The token is held in memory, sent only to
 `https://api.anthropic.com/api/oauth/usage`, and never logged, stored or
@@ -151,21 +163,26 @@ conversation titles, for sharing screenshots like the ones above.
 
 Docked left of the notification area: both limits as a bar, a percent and the
 time to reset. Click it to open the dashboard; right-click for "Start with
-Windows" and "Quit". A small native process (about 10 MB). Needs the
-[always-on dashboard](#always-on-dashboard-docker) running,
-[Rust](https://www.rust-lang.org/) (`mise install`) and the Visual Studio C++
-build tools.
+Windows" and "Quit". A small native process (about 10 MB). It shows the data of
+the dashboard that answers: the npm one on port 4747, which the hook starts
+whenever Claude Code is used, or the [Docker one](#always-on-dashboard-docker-from-a-clone).
 
-```sh
-npm run widget:install # builds it, copies it to %LOCALAPPDATA%\Claude Analytics Dashboard Widget, starts it
-```
+Download `cca-widget.exe` from the
+[latest release](https://github.com/Pierre-Demessence/ClaudeAnalyticsDashboard/releases/latest)
+and run it. The exe is not signed, so Windows SmartScreen asks once: choose "More
+info", then "Run anyway". "Start with Windows" starts the exe where it is, so put
+it where it can stay. To update, quit the widget and replace the exe with the new one.
+
+From a clone, `npm run widget:install` builds it (needs
+[Rust](https://www.rust-lang.org/), `mise install`, and the Visual Studio C++ build
+tools), copies it to `%LOCALAPPDATA%\Claude Analytics Dashboard Widget` and starts it.
 
 Only one widget runs at a time: quit the installed one before `widget:dev` or a
 new `widget:install`.
 
-### Always-on dashboard (Docker)
+### Always-on dashboard (Docker, from a clone)
 
-`npm run docker:up` builds the image and serves the dashboard at
+An alternative to the npm install for contributors: `npm run docker:up` builds the image and serves the dashboard at
 <http://analytics.claudecode.localhost>. Needs Docker Desktop and a running
 Traefik reverse proxy joined to an external `claudecodeanalytics` network, which
 no other container joins, so no other container can call the dashboard's API.
@@ -175,6 +192,18 @@ was built from: run `npm run docker:up` again after updating, and only on code
 you trust, since the collector can read your login token.
 
 ## Development
+
+```sh
+git clone https://github.com/Pierre-Demessence/ClaudeAnalyticsDashboard.git
+cd ClaudeAnalyticsDashboard
+npm install
+npm run dev # dashboard with hot reload
+```
+
+`npm run hook:install -- --apply` adds a hook that asks the Docker dashboard to
+import after every response; it runs no code from the clone, so a branch checked
+out here never runs on its own. Without a hook, any running dashboard imports
+every minute.
 
 | Script | Description |
 | --- | --- |

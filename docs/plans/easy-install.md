@@ -122,7 +122,7 @@ downloading one exe, with no Rust and no Traefik.
   Visible after: the new name in the header, the browser tab and the widget's menu.
   Needs you: quit the widget, `npm run widget:install`, check it starts with Windows
   once (at the end).
-- [ ] B47.7 Docs: README "Install" (setup, widget download, update, uninstall), clone
+- [x] B47.7 Docs: README "Install" (setup, widget download, update, uninstall), clone
   path under Development; CHANGELOG; CONTRIBUTING setup; AGENTS commands/layout/
   invariants; decisions: replace "Server-side summary in a Vite plugin" and "Always-on
   dashboard" entries, add the npm hook fallback to the hook entry.

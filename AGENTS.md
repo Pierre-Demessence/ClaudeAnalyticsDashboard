@@ -28,10 +28,16 @@ that setup isn't yours.
 - Backtest: `npm run backtest` (`-- --weeks 8 --step-hours 6`) replays the
   forecasts on the data dir, read-only, and scores them against the final %
 - Hook: `npm run hook:install` prints it; `-- --apply` edits `~/.claude/settings.json`
+  (the Docker dashboard's hook; the npm package's is `claude-analytics-dashboard setup`)
+- npm package CLI (`src/server/cli.ts`, bin `claude-analytics-dashboard`): `start`,
+  `stop`, `setup`, `install-hook`; from the clone, `npm run build && npm run build:lib`
+  then `node lib/server/cli.js start` (port 4747, or `CCA_PORT`)
 - Build: `npm run build` (type-checks both tsconfigs, then `vite build`)
 - Package: `npm run build:lib` emits `core`, `collector` and `server` to `lib/` (the
   published package's code, git-ignored); `npm run pack:check` packs, installs the
   tarball in a temp prefix and runs `setup`, a page fetch and `stop` against it
+- Release: a pushed tag `vX.Y.Z` runs `.github/workflows/release.yml` (see Invariants).
+  `scripts/release-check.ts` is its first step
 - Lint: `npm run lint` / `npm run lint:fix`
 - Test: `npm test` / `npm run test:watch` / `npm run test:coverage`
 
@@ -49,7 +55,9 @@ Run lint, test and build before considering work done.
   store, lock, hook installer; entry `cli.ts`.
 - `src/server/api.ts` — Vite plugin serving `/api/*` in dev and preview (`/api/range` is the
   history tabs' view of a range, from the stored data only), and running the throttled
-  collector every minute while the server is up.
+  collector every minute while the server is up. `serve.ts` is the production server
+  (static `dist/`, `/api`, Host check, health, shutdown), `control.ts` the CLI's
+  helpers (port probe, background spawn, stop), `cli.ts` the package's entry.
 - `src/dashboard/` — React app (`main.tsx` entry).
 - `widget/` — the taskbar widget, one native Rust process (no webview): `widget.svg`
   is its look, `src/` the logic (`view` texts and flags, `template` fills the SVG,
@@ -59,6 +67,9 @@ Run lint, test and build before considering work done.
   images: each tab in light and dark, anonymize mode on, 1280 px wide at 2× scale, cut
   below the last whole card.
 - `Dockerfile`, `docker-compose.yml` — the always-on dashboard behind Traefik.
+- `scripts/` — `pack-check.ts` (the packed package, run like a friend would) and
+  `release-check.ts` (the release workflow's version and CHANGELOG check);
+  `.github/workflows/` — `ci.yml` and `release.yml`.
 
 ## Conventions
 
@@ -151,13 +162,25 @@ Run lint, test and build before considering work done.
 - The usage endpoint needs a `claude-code/<version>` User-Agent; keep the
   throttle (default 15 min) and never add a retry loop: it shares a tight rate
   limit with Claude Code's own `/usage`.
-- The Claude Code hook (`collector/hook.ts`) runs no code from this folder: it POSTs
-  to the container's `/api/hook`, so only the image built by `docker:up` collects
-  after each response. Never make it run the working copy (a `node …/cli.ts`
-  command, or a fallback when the container is down): checking out a contributor's
-  branch would run their code as the user, with the OAuth token in reach. Run
-  `docker:up` only on reviewed code. A failed run is recorded as `lastError` in the
-  status.
+- The Claude Code hook (`collector/hook.ts`) has two variants and `withCollectorHook`
+  replaces either by the other. The repository's (`npm run hook:install`) runs no code
+  from this folder: it POSTs to the container's `/api/hook`, so only the image built
+  by `docker:up` collects after each response. Never make it run the working copy (a
+  `node …/cli.ts` command, or a fallback when the container is down): checking out a
+  contributor's branch would run their code as the user, with the OAuth token in reach.
+  Run `docker:up` only on reviewed code. The npm package's (`setup`) POSTs to
+  `localhost:4747/api/hook` and, when that fails, runs the globally installed
+  `claude-analytics-dashboard start --background`: that is a released copy, never a
+  working copy, so the same rule is kept. A failed run is recorded as `lastError` in
+  the status.
+- A release is a tag `vX.Y.Z` on `main` (never pushed without the user asking).
+  `release.yml` checks the tag against `package.json`, `package-lock.json`,
+  `widget/Cargo.toml` and the CHANGELOG, runs lint, tests, build and `pack:check`,
+  builds the widget, then *stages* the npm version through trusted publishing (no
+  token; the publisher on npmjs.com allows `npm stage publish` only, so a maintainer
+  approves the version with 2FA there) and creates the GitHub Release with
+  `cca-widget.exe` and the version's CHANGELOG section. The package must keep an empty
+  `dependencies`: the dashboard and its libraries are bundled into `dist/`.
 - The data dir (`~/.claude-code-analytics/`, or `CCA_DATA_DIR`) holds the
   user's history: never wipe it. Tests and manual runs use a temp
   `CCA_DATA_DIR`. Stored messages hold token counts and session metadata
