@@ -70,7 +70,7 @@ downloading one exe, with no Rust and no Traefik.
   with temp `CCA_DATA_DIR` and `CLAUDE_CONFIG_DIR`, fetch `/` and `/api/summary`.
 - **Widget**: two candidates, Traefik (`127.0.0.1:80`, Host `analytics.claudecode.localhost`)
   then npm (`127.0.0.1:4747`, Host `localhost:4747`); the one that answered is tried
-  first next time; the click opens its URL. Both stay in `fetch.rs`/`window.rs`.
+  first next time; the click opens its URL. Both live in `fetch.rs`.
 - **Release**: `.github/workflows/release.yml` on `v*`: Ubuntu job lint/test/build then
   `npm publish` through trusted publishing (`id-token: write`, npm ≥ 11.5.1, provenance
   automatic); Windows job `cargo build --release`, `gh release create` with the exe and
@@ -99,7 +99,7 @@ downloading one exe, with no Rust and no Traefik.
   Dockerfile without dev deps or `--configLoader native`; AGENTS invariants updated.
   Visible after: your always-on dashboard runs the new server, same URL.
   Needs you: `npm run docker:up`, then check the dashboard, a hook run and the widget (at the end).
-- [ ] B47.5 Widget finds either dashboard (AC7). Visible after: the widget works with the
+- [x] B47.5 Widget finds either dashboard (AC7). Visible after: the widget works with the
   npm version. Needs you: nothing (covered by `widget:test`).
 - [ ] B47.6 Release workflow (AC8). Visible after: nothing until a tag is pushed.
   Needs you: publish 0.5.0 once by hand (`npm publish`), set the package's trusted

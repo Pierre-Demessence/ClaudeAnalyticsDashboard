@@ -28,9 +28,8 @@ use windows::Win32::UI::WindowsAndMessaging::{
 
 use crate::render::{self, Frame};
 use crate::view::{self, State};
-use crate::{autostart, source, template, theme};
+use crate::{autostart, fetch, source, template, theme};
 
-pub const DASHBOARD_URL: &str = "http://analytics.claudecode.localhost/";
 const CLASS: PCWSTR = w!("ClaudeCodeAnalyticsWidget");
 const TITLE: PCWSTR = w!("Claude Code Analytics Widget");
 
@@ -79,7 +78,7 @@ pub fn create() -> Result<HWND, String> {
 }
 
 fn open_dashboard() {
-    let wide: Vec<u16> = DASHBOARD_URL.encode_utf16().chain(Some(0)).collect();
+    let wide: Vec<u16> = fetch::dashboard_url().encode_utf16().chain(Some(0)).collect();
     // A value over 32 means success; there is nothing to do about a failure here.
     unsafe {
         ShellExecuteW(None, w!("open"), PCWSTR(wide.as_ptr()), None, None, SW_SHOWNORMAL);

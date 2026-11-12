@@ -1,17 +1,40 @@
 //! The widget's one request: `GET /api/widget` on the dashboard.
 //!
-//! Windows does not resolve `*.localhost` (browsers special-case it), so the
-//! connection goes to loopback, where Traefik listens, and the `Host` header stays
-//! the real one for its routing. The request is HTTP/1.0 so that the answer is never
-//! chunked: the body is everything after the headers. Redirects are not followed.
+//! Two dashboards can be up: the Docker one behind Traefik and the npm one. Windows
+//! does not resolve `*.localhost` (browsers special-case it), so the connection always
+//! goes to loopback and the `Host` header stays the real one for Traefik's routing.
+//! The request is HTTP/1.0 so that the answer is never chunked: the body is everything
+//! after the headers. Redirects are not followed.
 
 use std::io::{Read, Write};
 use std::net::{Ipv4Addr, SocketAddr, TcpStream};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 
 use crate::view::WidgetView;
 
-pub const DASHBOARD_HOST: &str = "analytics.claudecode.localhost";
+/// Where a dashboard listens, the `Host` it routes on and the address a click opens.
+pub struct Dashboard {
+    pub host: &'static str,
+    pub port: u16,
+    pub url: &'static str,
+}
+
+pub const TRAEFIK: Dashboard = Dashboard {
+    host: "analytics.claudecode.localhost",
+    port: 80,
+    url: "http://analytics.claudecode.localhost/",
+};
+/// The npm package's server, on its default port.
+pub const NPM: Dashboard = Dashboard {
+    host: "localhost:4747",
+    port: 4747,
+    url: "http://localhost:4747/",
+};
+const CANDIDATES: [&Dashboard; 2] = [&TRAEFIK, &NPM];
+
+/// Index in `CANDIDATES` of the dashboard that answered last, tried first next time.
+static ACTIVE: AtomicUsize = AtomicUsize::new(0);
 const TIMEOUT: Duration = Duration::from_secs(10);
 /// The answer is a few hundred bytes; anything much larger is not the API.
 const MAX_ANSWER: u64 = 64 * 1024;
@@ -38,8 +61,8 @@ fn parse(answer: &[u8]) -> Result<WidgetView, String> {
     serde_json::from_slice(body).map_err(|error| format!("bad answer: {error}"))
 }
 
-/// Asks the dashboard on `address` (loopback, port 80 in production) for the widget view.
-pub fn fetch_from(address: SocketAddr, host: &str, path: &str) -> Result<WidgetView, String> {
+/// Asks the dashboard on `address` (always loopback) for the widget view.
+fn fetch_from(address: SocketAddr, host: &str, path: &str) -> Result<WidgetView, String> {
     let mut stream = TcpStream::connect_timeout(&address, TIMEOUT).map_err(|error| error.to_string())?;
     stream.set_read_timeout(Some(TIMEOUT)).map_err(|error| error.to_string())?;
     stream.set_write_timeout(Some(TIMEOUT)).map_err(|error| error.to_string())?;
@@ -54,12 +77,30 @@ pub fn fetch_from(address: SocketAddr, host: &str, path: &str) -> Result<WidgetV
     parse(&answer)
 }
 
+/// Tries the candidates, the last one that answered first. Returns its index and view.
+fn fetch_first(candidates: &[&Dashboard], first: usize) -> Result<(usize, WidgetView), String> {
+    let mut errors = Vec::new();
+    for offset in 0..candidates.len() {
+        let index = (first + offset) % candidates.len();
+        let dashboard = candidates[index];
+        let address = SocketAddr::from((Ipv4Addr::LOCALHOST, dashboard.port));
+        match fetch_from(address, dashboard.host, "/api/widget") {
+            Ok(view) => return Ok((index, view)),
+            Err(error) => errors.push(format!("{}: {error}", dashboard.host)),
+        }
+    }
+    Err(errors.join("; "))
+}
+
 pub fn fetch() -> Result<WidgetView, String> {
-    fetch_from(
-        SocketAddr::from((Ipv4Addr::LOCALHOST, 80)),
-        DASHBOARD_HOST,
-        "/api/widget",
-    )
+    let (index, view) = fetch_first(&CANDIDATES, ACTIVE.load(Ordering::Relaxed))?;
+    ACTIVE.store(index, Ordering::Relaxed);
+    Ok(view)
+}
+
+/// The address a click opens: the dashboard that answered last.
+pub fn dashboard_url() -> &'static str {
+    CANDIDATES[ACTIVE.load(Ordering::Relaxed)].url
 }
 
 #[cfg(test)]
@@ -87,7 +128,7 @@ mod tests {
     #[test]
     fn asks_for_the_route_with_the_real_host_header() {
         let (address, handle) = serve(format!("HTTP/1.0 200 OK\r\n\r\n{BODY}"));
-        fetch_from(address, DASHBOARD_HOST, "/api/widget").unwrap();
+        fetch_from(address, TRAEFIK.host, "/api/widget").unwrap();
         let received = handle.join().unwrap();
         assert!(received.starts_with("GET /api/widget HTTP/1.0\r\n"));
         assert!(received.contains("Host: analytics.claudecode.localhost\r\n"));
@@ -96,7 +137,7 @@ mod tests {
     #[test]
     fn reads_the_view_from_the_body() {
         let (address, _) = serve(format!("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n{BODY}"));
-        let view = fetch_from(address, DASHBOARD_HOST, "/api/widget").unwrap();
+        let view = fetch_from(address, TRAEFIK.host, "/api/widget").unwrap();
         assert_eq!(view.five_hour.percent, Some(42.0));
         assert_eq!(view.weekly.percent, None);
     }
@@ -119,9 +160,48 @@ mod tests {
         assert!(parse(b"").is_err());
     }
 
+    fn dashboard(address: SocketAddr, host: &'static str) -> Dashboard {
+        Dashboard {
+            host,
+            port: address.port(),
+            url: "http://unused/",
+        }
+    }
+
+    fn refused() -> SocketAddr {
+        TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).unwrap().local_addr().unwrap()
+    }
+
+    const OK: &str = "HTTP/1.0 200 OK\r\n\r\n";
+
+    #[test]
+    fn falls_back_to_the_second_dashboard_with_its_own_host() {
+        let (up, handle) = serve(format!("{OK}{BODY}"));
+        let (first, second) = (dashboard(refused(), "first"), dashboard(up, "second:1"));
+        let (index, view) = fetch_first(&[&first, &second], 0).unwrap();
+        assert_eq!(index, 1);
+        assert_eq!(view.five_hour.percent, Some(42.0));
+        assert!(handle.join().unwrap().contains("Host: second:1\r\n"));
+    }
+
+    #[test]
+    fn starts_with_the_dashboard_that_answered_last() {
+        let (first_up, _) = serve(format!("{OK}{BODY}"));
+        let (second_up, _) = serve(format!("{OK}{BODY}"));
+        let (first, second) = (dashboard(first_up, "first"), dashboard(second_up, "second"));
+        assert_eq!(fetch_first(&[&first, &second], 1).unwrap().0, 1);
+    }
+
+    #[test]
+    fn reports_every_failure_when_none_answers() {
+        let (first, second) = (dashboard(refused(), "first"), dashboard(refused(), "second"));
+        let error = fetch_first(&[&first, &second], 0).err().unwrap();
+        assert!(error.contains("first:") && error.contains("second:"));
+    }
+
     #[test]
     fn a_refused_connection_is_an_error() {
         let address = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).unwrap().local_addr().unwrap();
-        assert!(fetch_from(address, DASHBOARD_HOST, "/api/widget").is_err());
+        assert!(fetch_from(address, TRAEFIK.host, "/api/widget").is_err());
     }
 }

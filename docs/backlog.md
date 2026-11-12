@@ -1,6 +1,6 @@
 # Backlog
 
-Next ID: B49
+Next ID: B50
 
 Everything not done yet. One line per item; delete an item in the same commit
 that completes it. Sections say what kind of work an item is; `docs/roadmap.md`
@@ -54,6 +54,7 @@ Improvements to something that exists.
 
 ### Taskbar widget
 
+- B49 `[widget]` The widget looks for the npm server on port 4747 only (`widget/src/fetch.rs`, `NPM`); with `CCA_PORT` or `--port` set to another port it shows nothing and a click opens the wrong address. Let the widget read the port from a setting or the data dir.
 - B23 `[widget]` The taskbar widget docks only into a bottom taskbar on the primary monitor (`widget/src/dock.rs:47-49`: `x` comes from the tray's left edge, the height from the whole taskbar). A side or top taskbar would clip it; fall back to a floating window near the tray, and dock into each monitor's secondary taskbar.
 
 ## Waiting for data

@@ -587,9 +587,11 @@ no installer, and "Start with Windows" is a `Run` registry value.
 
 ## The taskbar widget fetches over plain HTTP on loopback and polls `/api/widget`
 
-The widget's one request is a hand-written HTTP/1.0 `GET` to `127.0.0.1:80` with
-`Host: analytics.claudecode.localhost`: Windows does not resolve `*.localhost`
-subdomains (only browsers do), and Traefik routes on the `Host` header. HTTP/1.0
+The widget's one request is a hand-written HTTP/1.0 `GET` to loopback with the
+dashboard's real `Host`: Windows does not resolve `*.localhost` subdomains (only
+browsers do), and Traefik routes on the `Host` header. It tries Traefik
+(`127.0.0.1:80`, `analytics.claudecode.localhost`) then the npm server
+(`127.0.0.1:4747`, `localhost:4747`), the one that answered last first. HTTP/1.0
 means the answer is never chunked. Rejected: an HTTP client crate (`reqwest` is most of
 the build for one request); a hosts-file entry, which lives outside the repo.
 The widget polls a dedicated route that runs the collector rather than reading

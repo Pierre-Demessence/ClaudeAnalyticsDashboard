@@ -198,10 +198,12 @@ Run lint, test and build before considering work done.
   `vitest.config.ts`.
 - The app name comes from `brand.json`; never hard-code it in `index.html`.
 - The taskbar widget never reads the OAuth token and calls nothing but
-  `GET /api/widget` (`widget/src/fetch.rs`: plain HTTP/1.0 to `127.0.0.1:80` with
-  the real `Host`, since Windows does not resolve `*.localhost`). That route runs the
-  collector like `/summary`, so the endpoint keeps its throttle however many widgets
-  poll. The dashboard URL lives in `widget/src/window.rs` and `fetch.rs` alone.
+  `GET /api/widget` (`widget/src/fetch.rs`: plain HTTP/1.0 to loopback with the real
+  `Host`, since Windows does not resolve `*.localhost`: first Traefik on port 80, then
+  the npm server on port 4747; the one that answered last is tried first, and a click
+  opens its URL). That route runs the collector like `/summary`, so the endpoint keeps
+  its throttle however many widgets poll. The dashboards' addresses and URLs live in
+  `widget/src/fetch.rs` alone.
   `resetsAtMs` is epoch milliseconds so Rust needs no date parser.
 - `widget.svg` has `{{placeholders}}` filled by `template.rs`; its background rect is
   almost transparent on purpose (a fully transparent pixel lets the click through to
