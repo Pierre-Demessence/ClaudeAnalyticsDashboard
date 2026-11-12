@@ -1,7 +1,7 @@
 {
   "name": "claude-analytics-dashboard",
   "type": "module",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "A local dashboard estimating Claude Code plan usage from your transcripts and the plan-limit endpoint.",
   "license": "MIT",
   "repository": {
