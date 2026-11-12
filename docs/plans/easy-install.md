@@ -37,7 +37,7 @@ downloading one exe, with no Rust and no Traefik.
 - AC10 The app is named "Claude Analytics Dashboard" everywhere a user reads it (header,
   browser tab, README, widget menu, install folder, Windows startup entry); WHEN the
   widget is reinstalled, THE SYSTEM SHALL leave no startup entry or folder under the old
-  name. Check: `git grep "Claude Code Analytics"` finds only CHANGELOG history and the Claude Design canvas title in AGENTS; manual
+  name. Check: `git grep "Claude Code Analytics"` finds only CHANGELOG history, the Claude Design canvas title in AGENTS and `install.ps1`'s cleanup of the old names; manual
   reinstall.
 
 ## Design
@@ -109,7 +109,7 @@ downloading one exe, with no Rust and no Traefik.
   Needs you: set the package's trusted publisher on npmjs.com (GitHub Actions,
   `Pierre-Demessence/ClaudeAnalyticsDashboard`, `release.yml`, no environment, "Allow npm
   publish" unticked), push the tag, approve the staged version on npmjs.com (at the end).
-- [ ] B47.8 Rename the app to "Claude Analytics Dashboard" (AC10): `brand.json`; `Header.tsx`
+- [x] B47.8 Rename the app to "Claude Analytics Dashboard" (AC10): `brand.json`; `Header.tsx`
   reads the name from `brand.json` instead of hard-coding it; README, AGENTS and SECURITY
   titles; widget `Cargo.toml` description, window title, install folder
   `%LOCALAPPDATA%\Claude Analytics Dashboard Widget` and Run value name;

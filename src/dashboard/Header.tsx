@@ -11,6 +11,8 @@ import { tabHref, TABS } from '@/dashboard/tabs';
 import { useNow } from '@/dashboard/useNow';
 import { useTip } from '@/dashboard/useTip';
 
+import brand from '../../brand.json';
+
 interface Props {
   anonymous: boolean;
   busy: boolean;
@@ -34,7 +36,7 @@ export function Header({ anonymous, busy, onRefresh, onToggleAnonymous, onToggle
     <header className="app-header">
       <div className="app-header-inner">
         <div className="app-header-top">
-          <h1>Claude Code Analytics</h1>
+          <h1>{brand.name}</h1>
           {summary && (
             <span className="plan-badge">
               {PLAN_LABELS[summary.plan]}

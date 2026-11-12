@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Agent operating notes for **Claude Code Analytics**: a local dashboard (Vite +
+Agent operating notes for **Claude Analytics Dashboard**: a local dashboard (Vite +
 React + TypeScript strict) estimating Claude Code plan usage from local
 transcripts and the plan-limit endpoint.
 
@@ -21,7 +21,7 @@ that setup isn't yours.
   don't have one.
 - Taskbar widget: `npm run widget:dev` (debug build, redraws when
   `widget/widget.svg` is saved) / `npm run widget:install` (release build copied
-  to `%LOCALAPPDATA%Claude Code Analytics Widget` and started) /
+  to `%LOCALAPPDATA%\Claude Analytics Dashboard Widget` and started) /
   `npm run widget:test` (`cargo test` + `clippy -D warnings`); needs Rust, from
   `mise.toml`
 - Collector: `npm run collect` (`-- --force` ignores the endpoint throttle)

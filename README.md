@@ -1,4 +1,4 @@
-# Claude Code Analytics
+# Claude Analytics Dashboard
 
 **Will I last the week? Am I on the right plan? Where do my tokens go?**
 
@@ -70,8 +70,8 @@ Also: **Weeks** (the last 12 weekly windows, day by day) and **Calibration**
 Requires Node ≥ 22.18.
 
 ```sh
-git clone https://github.com/Pierre-Demessence/ClaudeCodeAnalytics.git
-cd ClaudeCodeAnalytics
+git clone https://github.com/Pierre-Demessence/ClaudeAnalyticsDashboard.git
+cd ClaudeAnalyticsDashboard
 npm install
 npm run hook:install -- --apply # adds the collector hook to ~/.claude/settings.json (with a backup); it calls the always-on dashboard
 npm run dashboard               # builds and opens the dashboard
@@ -157,7 +157,7 @@ Windows" and "Quit". A small native process (about 10 MB). Needs the
 build tools.
 
 ```sh
-npm run widget:install # builds it, copies it to %LOCALAPPDATA%\Claude Code Analytics Widget, starts it
+npm run widget:install # builds it, copies it to %LOCALAPPDATA%\Claude Analytics Dashboard Widget, starts it
 ```
 
 Only one widget runs at a time: quit the installed one before `widget:dev` or a

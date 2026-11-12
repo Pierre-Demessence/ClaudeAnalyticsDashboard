@@ -6,6 +6,8 @@ import type { Summary } from '@/dashboard/api';
 import { buildSummary } from '@/core/summary';
 import { Header } from '@/dashboard/Header';
 
+import brand from '../../brand.json';
+
 function summary(): Summary {
   return {
     ...buildSummary({ endpointEnabled: true, now: Date.now(), planHistory: [], records: [], snapshots: [], timeZone: 'UTC' }),
@@ -20,6 +22,11 @@ function renderHeader(props: Partial<Parameters<typeof Header>[0]> = {}) {
 describe('header', () => {
   // Testing Library only cleans up automatically with Vitest globals, which this project does not use.
   afterEach(cleanup);
+
+  it('shows the app name from brand.json', () => {
+    renderHeader();
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(brand.name);
+  });
 
   it('says when there is no reading yet', () => {
     renderHeader();

@@ -1,12 +1,12 @@
 # Security policy
 
-Claude Code Analytics reads your Claude Code transcripts and, when the usage
+Claude Analytics Dashboard reads your Claude Code transcripts and, when the usage
 endpoint is on, your OAuth token. A flaw here can expose private data, so
 please report it privately.
 
 ## Reporting a vulnerability
 
-Use [GitHub's private vulnerability reporting](https://github.com/Pierre-Demessence/ClaudeCodeAnalytics/security/advisories/new).
+Use [GitHub's private vulnerability reporting](https://github.com/Pierre-Demessence/ClaudeAnalyticsDashboard/security/advisories/new).
 Don't open a public issue or pull request for it.
 
 Include what an attacker can do, how to reproduce it, and the version or commit

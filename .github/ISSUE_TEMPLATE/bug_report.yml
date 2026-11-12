@@ -6,7 +6,7 @@ body:
     attributes:
       value: |
         Thanks for reporting. Don't paste transcript content, tokens or anything from `~/.claude/.credentials.json`. Turn on anonymize mode (the eye button) before taking screenshots.
-        A security problem (a token or private data leaking)? Don't file it here: see [SECURITY.md](https://github.com/Pierre-Demessence/ClaudeCodeAnalytics/blob/main/SECURITY.md).
+        A security problem (a token or private data leaking)? Don't file it here: see [SECURITY.md](https://github.com/Pierre-Demessence/ClaudeAnalyticsDashboard/blob/main/SECURITY.md).
   - type: textarea
     id: what
     attributes:

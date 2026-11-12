@@ -8,7 +8,7 @@ use windows::Win32::System::Registry::{
 };
 
 const KEY: PCWSTR = w!(r"Software\Microsoft\Windows\CurrentVersion\Run");
-const NAME: PCWSTR = w!("Claude Code Analytics Widget");
+const NAME: PCWSTR = w!("Claude Analytics Dashboard Widget");
 
 /// On only when the value starts this exe: a leftover entry of an older install,
 /// or of a debug build, would otherwise show as checked while starting something else.

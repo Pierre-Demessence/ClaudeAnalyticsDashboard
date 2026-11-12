@@ -8,6 +8,11 @@ Noteworthy changes for users. The format follows
 
 ### Changed
 
+- The app is called "Claude Analytics Dashboard" (header, browser tab, taskbar
+  widget). Reinstalling the widget (`npm run widget:install`) moves it to
+  `%LOCALAPPDATA%\Claude Analytics Dashboard Widget` and removes the old folder
+  and the old "Start with Windows" entry: tick "Start with Windows" again in its
+  menu.
 - The 5-hour forecast looks at what your past sessions spent from the same point
   of their run to their end, instead of their average pace over the hours left,
   and leans more on the current session's own pace as the window runs. Its middle
@@ -196,8 +201,8 @@ pacing, subscription vs API prices, usage breakdowns, past sessions and weeks,
 which plan fits your usage, a Windows taskbar widget and an always-on Docker
 setup.
 
-[Unreleased]: https://github.com/Pierre-Demessence/ClaudeCodeAnalytics/compare/v0.4.0...HEAD
-[0.4.0]: https://github.com/Pierre-Demessence/ClaudeCodeAnalytics/compare/v0.3.0...v0.4.0
-[0.3.0]: https://github.com/Pierre-Demessence/ClaudeCodeAnalytics/compare/v0.2.0...v0.3.0
-[0.2.0]: https://github.com/Pierre-Demessence/ClaudeCodeAnalytics/compare/v0.1.0...v0.2.0
-[0.1.0]: https://github.com/Pierre-Demessence/ClaudeCodeAnalytics/releases/tag/v0.1.0
+[Unreleased]: https://github.com/Pierre-Demessence/ClaudeAnalyticsDashboard/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/Pierre-Demessence/ClaudeAnalyticsDashboard/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/Pierre-Demessence/ClaudeAnalyticsDashboard/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/Pierre-Demessence/ClaudeAnalyticsDashboard/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/Pierre-Demessence/ClaudeAnalyticsDashboard/releases/tag/v0.1.0

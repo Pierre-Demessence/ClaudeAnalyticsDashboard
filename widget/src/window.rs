@@ -31,7 +31,7 @@ use crate::view::{self, State};
 use crate::{autostart, fetch, source, template, theme};
 
 const CLASS: PCWSTR = w!("ClaudeCodeAnalyticsWidget");
-const TITLE: PCWSTR = w!("Claude Code Analytics Widget");
+const TITLE: PCWSTR = w!("Claude Analytics Dashboard Widget");
 
 const MENU_OPEN: usize = 1;
 const MENU_AUTOSTART: usize = 2;

@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Check [docs/backlog.md](https://github.com/Pierre-Demessence/ClaudeCodeAnalytics/blob/main/docs/backlog.md) first: the idea may already be listed, and a comment on why you need it helps. [docs/decisions.md](https://github.com/Pierre-Demessence/ClaudeCodeAnalytics/blob/main/docs/decisions.md) explains choices that may look odd.
+        Check [docs/backlog.md](https://github.com/Pierre-Demessence/ClaudeAnalyticsDashboard/blob/main/docs/backlog.md) first: the idea may already be listed, and a comment on why you need it helps. [docs/decisions.md](https://github.com/Pierre-Demessence/ClaudeAnalyticsDashboard/blob/main/docs/decisions.md) explains choices that may look odd.
   - type: textarea
     id: problem
     attributes:
