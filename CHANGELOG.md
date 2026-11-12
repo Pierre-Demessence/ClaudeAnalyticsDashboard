@@ -6,6 +6,8 @@ Noteworthy changes for users. The format follows
 
 ## [Unreleased]
 
+## [0.5.1]
+
 ### Added
 
 - Install with Docker alone, no Node: each release publishes an image on GitHub's
@@ -220,7 +222,8 @@ pacing, subscription vs API prices, usage breakdowns, past sessions and weeks,
 which plan fits your usage, a Windows taskbar widget and an always-on Docker
 setup.
 
-[Unreleased]: https://github.com/Pierre-Demessence/ClaudeAnalyticsDashboard/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/Pierre-Demessence/ClaudeAnalyticsDashboard/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/Pierre-Demessence/ClaudeAnalyticsDashboard/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/Pierre-Demessence/ClaudeAnalyticsDashboard/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/Pierre-Demessence/ClaudeAnalyticsDashboard/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/Pierre-Demessence/ClaudeAnalyticsDashboard/compare/v0.2.0...v0.3.0
