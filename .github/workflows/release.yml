@@ -27,6 +27,7 @@ jobs:
       - run: npm test
       - run: npm run build
       - run: npm run pack:check
+      - run: npm run image:check
 
   widget:
     needs: verify
@@ -63,9 +64,45 @@ jobs:
       - run: npm ci
       - run: npm stage publish
 
+  # After the npm stage, so a failed verify, widget or publish pushes no image. The image goes
+  # live at once, unlike the npm version. The build stage runs on the runner's own platform
+  # (`--platform=$BUILDPLATFORM` in the Dockerfile) and the final stage has no `RUN`, so arm64
+  # needs no emulation. `latest` and `X.Y` come with every release except a prerelease.
+  # The third-party actions are pinned to a commit: they hold a token that can push the image
+  # users pull, and a moved tag would run new code with it.
+  image:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/claude-analytics-dashboard
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          annotations: ${{ steps.meta.outputs.annotations }}
+
   # The exe is unsigned: Windows SmartScreen asks once before running it.
   release:
-    needs: [publish, widget]
+    needs: [publish, widget, image]
     runs-on: ubuntu-latest
     permissions:
       contents: write

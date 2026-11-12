@@ -79,7 +79,7 @@ flowchart LR
 
 ## Checklist
 
-Status: B48.1 done; next is B48.2.
+Status: B48.1 and B48.2 done; next is B48.3.
 
 ### B48.1 Image check and user compose file
 
@@ -94,8 +94,8 @@ Needs you: nothing.
 
 ### B48.2 Publish the image on release
 
-- [ ] `release.yml`: `npm run image:check` in `verify`; the `image` job; `release` needs it.
-- [ ] Verify: `actionlint` if available, else a careful read of the `needs` chain against
+- [x] `release.yml`: `npm run image:check` in `verify`; the `image` job; `release` needs it.
+- [x] Verify: `actionlint` if available, else a careful read of the `needs` chain against
   AC4–AC5; no tag is pushed.
 
 Visible after: nothing until the next release tag; then the image is on GitHub's registry.
