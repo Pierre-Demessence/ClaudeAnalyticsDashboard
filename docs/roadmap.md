@@ -6,7 +6,7 @@ Order of the milestones. A milestone that needs design gets its own plan in
 
 ## Next
 
-Nothing scheduled.
+- **B47 Installable without cloning** (`docs/plans/easy-install.md`).
 
 ## Waiting for data
 
