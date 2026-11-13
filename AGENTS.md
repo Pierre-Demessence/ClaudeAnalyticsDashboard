@@ -192,7 +192,7 @@ Run lint, test and build before considering work done.
   `ghcr.io/pierre-demessence/claude-analytics-dashboard` (`X.Y.Z`, `X.Y`, `latest`;
   `linux/amd64` and `linux/arm64`) only after that staging, so a failed check publishes
   no image, and creates the GitHub Release with
-  `cca-widget.exe` and the version's CHANGELOG section. The image goes live at once,
+  `cca-widget.exe` and the version's CHANGELOG section plus a line naming its image. The image goes live at once,
   without the 2FA wait. The package must keep an empty
   `dependencies`: the dashboard and its libraries are bundled into `dist/`.
 - The data dir (`~/.claude-code-analytics/`, or `CCA_DATA_DIR`) holds the

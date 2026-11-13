@@ -1,7 +1,7 @@
 /**
  * Run by the release workflow with the pushed tag (`vX.Y.Z`): fails unless `package.json`
  * and `widget/Cargo.toml` carry that version and CHANGELOG.md has a section for it, then
- * prints that section, which becomes the GitHub Release's notes.
+ * prints that section and the version's Docker image, which become the GitHub Release's notes.
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -27,6 +27,15 @@ export function changelogSection(changelog: string, version: string): string {
   return text;
 }
 
+// The image the workflow's `image` job pushes; the registry lowercases the owner.
+const IMAGE = 'ghcr.io/pierre-demessence/claude-analytics-dashboard';
+const IMAGE_PAGE = 'https://github.com/users/Pierre-Demessence/packages/container/package/claude-analytics-dashboard';
+
+/** The GitHub Release's notes: the version's CHANGELOG section, then its Docker image. */
+export function releaseNotes(changelog: string, version: string): string {
+  return `${changelogSection(changelog, version)}\n\n**Docker image:** [\`${IMAGE}:${version}\`](${IMAGE_PAGE})`;
+}
+
 function main(): void {
   const tag = process.argv[2] ?? '';
   const match = /^v(\d+\.\d+\.\d+)$/.exec(tag);
@@ -44,7 +53,7 @@ function main(): void {
   if (cargoVersion !== version)
     throw new Error(`Tag ${tag} but widget/Cargo.toml says ${cargoVersion}.`);
 
-  console.log(changelogSection(read('CHANGELOG.md'), version));
+  console.log(releaseNotes(read('CHANGELOG.md'), version));
 }
 
 if (import.meta.main) {
