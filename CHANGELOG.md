@@ -8,7 +8,8 @@ Noteworthy changes for users. The format follows
 
 ## [0.5.2]
 
-No changes for users.
+Fixes the release process only: the dashboard, the widget and the Docker image are
+the same as in 0.5.1.
 
 ## [0.5.1]
 
