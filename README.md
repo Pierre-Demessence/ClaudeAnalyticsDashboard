@@ -11,24 +11,46 @@ limits, and shows where the usage goes. Nothing leaves your machine.
   <img alt="Overview tab: weekly and 5-hour limits with their projection at reset, and the budget pacing chart for the week" src="docs/screenshots/overview-light.png">
 </picture>
 
+## Contents
+
+- [Highlights](#highlights)
+- [Install](#install): [Node](#node), [Docker](#docker), [Limit readings](#limit-readings)
+- [Tour](#tour)
+- [Taskbar widget (Windows)](#taskbar-widget-windows)
+- [Privacy](#privacy)
+- [Good to know](#good-to-know)
+- [Contributing](#contributing)
+
 ## Highlights
 
-- **Limit forecasts**: your weekly and 5-hour %, where they'll land at reset, and
-  how much active work time you have left.
-- **Budget pacing**: this week against an even pace, and the daily spend left.
-- **Subscription vs API prices**: what your plan saved you this billing cycle.
-- **Breakdowns**: by model, project, conversation, skill, subagent, tool and effort level.
-- **History**: past 5-hour sessions and weeks, the ones that hit the limit or got rate-limited.
-- **Plan fit**: whether Pro, Max or Ultra would have fit your last weeks.
-- **Taskbar widget** (Windows): both limits at a glance, always visible.
-- **Costs no usage**: it never calls Claude, so it uses no tokens and doesn't count toward your limits.
-- **Private by design**: never stores message content; anonymize mode for screenshots.
-- Light and dark themes, colorblind-friendly charts (every series has a texture).
+- **Limit forecasts**\
+  Your weekly and 5-hour %, where they'll land at reset, and the active work time left.
+- **Budget pacing**\
+  This week against an even pace, and the daily spend left.
+- **Subscription vs API prices**\
+  What your plan saved you this billing cycle.
+- **Breakdowns**\
+  By model, project, conversation, skill, subagent, tool and effort level.
+- **History**\
+  Past 5-hour sessions and weeks, the ones that hit the limit or got rate-limited.
+- **Plan fit**\
+  Whether Pro, Max or Ultra would have fit your last weeks.
+- **Taskbar widget**\
+  Both limits at a glance on Windows, always visible.
+- **Costs no usage**\
+  It never calls Claude, so it uses no tokens and doesn't count toward your limits.
+- **Private by design**\
+  Never stores message content; anonymize mode for screenshots.
+- **Accessible**\
+  Light and dark themes, colorblind-friendly charts (every series has a texture).
 
 ## Install
 
-Requires Node ≥ 22.18, on Windows, macOS or Linux. Without Node, use
-[Docker](#docker) instead.
+Pick Node or Docker, not both: each runs the same dashboard at <http://localhost:4747>.
+
+### Node
+
+Requires Node ≥ 22.18, on Windows, macOS or Linux.
 
 ```sh
 npm install -g claude-analytics-dashboard
@@ -69,7 +91,6 @@ imports your transcripts every minute (no hook needed) and restarts with Docker.
 - **Uninstall:** `docker compose down`.
 - **Linux:** create `~/.claude-code-analytics` before the first `up`. If your user
   id isn't 1000, add `user: "<uid>:<gid>"` under `dashboard` in the compose file.
-- Run either Docker or the npm package, not both: they share port 4747.
 
 ### Limit readings
 
