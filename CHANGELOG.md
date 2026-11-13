@@ -8,10 +8,7 @@ Noteworthy changes for users. The format follows
 
 ## [0.5.2]
 
-### Fixed
-
-- The release page has the taskbar widget download again: publishing 0.5.1 failed
-  before it created the page. Nothing else differs from 0.5.1.
+No changes for users.
 
 ## [0.5.1]
 
