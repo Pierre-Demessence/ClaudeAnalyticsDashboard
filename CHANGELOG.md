@@ -6,6 +6,13 @@ Noteworthy changes for users. The format follows
 
 ## [Unreleased]
 
+## [0.5.2]
+
+### Fixed
+
+- The release page has the taskbar widget download again: publishing 0.5.1 failed
+  before it created the page. Nothing else differs from 0.5.1.
+
 ## [0.5.1]
 
 ### Added
@@ -115,7 +122,8 @@ First public version: limit forecasts, budget pacing, subscription vs API
 prices, usage breakdowns, session and week history, plan fit, a Windows taskbar
 widget and a Docker setup.
 
-[Unreleased]: https://github.com/Pierre-Demessence/ClaudeAnalyticsDashboard/compare/v0.5.1...HEAD
+[Unreleased]: https://github.com/Pierre-Demessence/ClaudeAnalyticsDashboard/compare/v0.5.2...HEAD
+[0.5.2]: https://github.com/Pierre-Demessence/ClaudeAnalyticsDashboard/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/Pierre-Demessence/ClaudeAnalyticsDashboard/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/Pierre-Demessence/ClaudeAnalyticsDashboard/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/Pierre-Demessence/ClaudeAnalyticsDashboard/compare/v0.3.0...v0.4.0
